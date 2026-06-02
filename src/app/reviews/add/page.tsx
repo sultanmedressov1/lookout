@@ -157,7 +157,7 @@ export default function AddReviewPage() {
         {step === 2 && (
           <Step2
             selectedCompany={selectedCompany}
-            onSelect={(company) => setSelectedCompany(company)}
+            onSelect={(company: { id: string; name: string; bin: string }) => setSelectedCompany(company)}
             onNext={() => setStep(3)}
             onBack={() => setStep(1)}
           />
