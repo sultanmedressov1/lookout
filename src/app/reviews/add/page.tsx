@@ -45,7 +45,7 @@ const DEAL_TYPES = ['Товары', 'Услуги', 'Строительство'
 const YEARS = Array.from({ length: 15 }, (_, i) => String(new Date().getFullYear() - i))
 
 // ─── Главный компонент формы ──────────────────────────────
-export default function AddReviewPage() {
+function AddReviewContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -574,5 +574,20 @@ function NavButtons({ onBack, onNext, nextDisabled, nextLabel, isLoading }: any)
         {!isLoading && <ChevronRight className="w-4 h-4" />}
       </button>
     </div>
+  )
+}
+
+// ↓ ЭТО должно быть СНАРУЖИ всех функций, в самом конце файла
+import { Suspense } from 'react'
+
+export default function AddReviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-400 text-sm">Загрузка...</div>
+      </div>
+    }>
+      <AddReviewContent />
+    </Suspense>
   )
 }
