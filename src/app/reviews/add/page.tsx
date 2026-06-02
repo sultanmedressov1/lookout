@@ -1,188 +1,143 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { Suspense, useState, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
   Star, ChevronRight, ChevronLeft, CheckCircle2,
-  ShieldCheck, Building2, Search, Loader2, Mail,
-  FileText, Linkedin, Users, Handshake
+  Building2, Search, Loader2, ThumbsUp, ThumbsDown,
+  Minus, TrendingUp, TrendingDown, Users
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-// ─── Типы ────────────────────────────────────────────────
-type ReviewType = 'employee' | 'counterparty'
 type Step = 1 | 2 | 3 | 4 | 5
 
-interface EmployeeForm {
-  rating_overall: number
-  rating_salary: number
-  rating_management: number
-  rating_culture: number
-  rating_growth: number
-  title: string
-  pros: string
-  cons: string
-  advice: string
-  is_current: boolean
-  year_start: string
-  year_end: string
-  position_category: string
-}
+const CATEGORIES = ['IT и разработка','Менеджмент','Продажи','Маркетинг','Финансы','HR','Операции','Юридический','Производство','Дизайн','Аналитика','Другое']
+const YEARS = Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() - i))
 
-interface CounterpartyForm {
-  rating_overall: number
-  rating_payment: number
-  rating_communication: number
-  rating_quality: number
-  title: string
-  content: string
-  deal_year: string
-  deal_type: string
-}
+const RATINGS = [
+  { key: 'rating_overall',      label: 'Общая оценка',           required: true },
+  { key: 'rating_worklife',     label: 'Баланс работы и жизни',  required: false },
+  { key: 'rating_culture',      label: 'Культура компании',      required: false },
+  { key: 'rating_management',   label: 'Руководство',            required: false },
+  { key: 'rating_compensation', label: 'Зарплата и льготы',      required: false },
+  { key: 'rating_career',       label: 'Карьерный рост',         required: false },
+]
 
-const POSITION_CATEGORIES = ['IT и разработка', 'Менеджмент', 'Продажи', 'Маркетинг', 'Финансы', 'HR', 'Операции', 'Юридический', 'Производство', 'Другое']
-const DEAL_TYPES = ['Товары', 'Услуги', 'Строительство', 'IT-услуги', 'Логистика', 'Консалтинг', 'Другое']
-const YEARS = Array.from({ length: 15 }, (_, i) => String(new Date().getFullYear() - i))
-
-// ─── Главный компонент формы ──────────────────────────────
 function AddReviewContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-
   const [step, setStep] = useState<Step>(1)
-  const [reviewType, setReviewType] = useState<ReviewType>(
-    (searchParams.get('type') as ReviewType) || 'employee'
-  )
-  const [selectedCompany, setSelectedCompany] = useState<{ id: string; name: string; bin: string } | null>(
-    searchParams.get('company')
-      ? { id: searchParams.get('company')!, name: '', bin: '' }
-      : null
-  )
-  const [verifyMethod, setVerifyMethod] = useState<'email' | 'contract' | 'linkedin'>('email')
-  const [verifyValue, setVerifyValue] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [empForm, setEmpForm] = useState<EmployeeForm>({
-    rating_overall: 0, rating_salary: 0, rating_management: 0,
-    rating_culture: 0, rating_growth: 0,
+  const [company, setCompany] = useState<{ id: string; name: string; bin: string } | null>(null)
+  const [form, setForm] = useState({
+    rating_overall: 0, rating_worklife: 0, rating_culture: 0,
+    rating_management: 0, rating_compensation: 0, rating_career: 0,
     title: '', pros: '', cons: '', advice: '',
-    is_current: true, year_start: '', year_end: '', position_category: '',
+    is_current_employee: true, position_category: '',
+    year_start: '', year_end: '',
+    recommend: null as boolean | null,
+    ceo_approval: '' as '' | 'positive' | 'neutral' | 'negative',
+    business_outlook: '' as '' | 'positive' | 'neutral' | 'negative',
   })
 
-  const [cptyForm, setCptyForm] = useState<CounterpartyForm>({
-    rating_overall: 0, rating_payment: 0, rating_communication: 0, rating_quality: 0,
-    title: '', content: '', deal_year: '', deal_type: '',
-  })
-
-  const totalSteps = 4
-  const progress = ((step - 1) / totalSteps) * 100
+  const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
       const supabase = createClient()
-      const table = reviewType === 'employee' ? 'reviews_employee' : 'reviews_counterparty'
-
-      const data = reviewType === 'employee'
-        ? {
-            company_id: selectedCompany?.id,
-            rating_overall: empForm.rating_overall,
-            rating_salary: empForm.rating_salary || null,
-            rating_management: empForm.rating_management || null,
-            rating_culture: empForm.rating_culture || null,
-            rating_growth: empForm.rating_growth || null,
-            title: empForm.title,
-            pros: empForm.pros || null,
-            cons: empForm.cons || null,
-            advice_to_management: empForm.advice || null,
-            is_current_employee: empForm.is_current,
-            employment_year_start: empForm.year_start ? parseInt(empForm.year_start) : null,
-            employment_year_end: empForm.year_end ? parseInt(empForm.year_end) : null,
-            position_category: empForm.position_category || null,
-            verification_type: verifyMethod,
-            verification_status: 'pending',
-            is_published: false,
-          }
-        : {
-            company_id: selectedCompany?.id,
-            rating_overall: cptyForm.rating_overall,
-            rating_payment: cptyForm.rating_payment || null,
-            rating_communication: cptyForm.rating_communication || null,
-            rating_quality: cptyForm.rating_quality || null,
-            title: cptyForm.title,
-            content: cptyForm.content,
-            deal_year: cptyForm.deal_year ? parseInt(cptyForm.deal_year) : null,
-            deal_type: cptyForm.deal_type || null,
-            verification_status: 'pending',
-            is_published: false,
-          }
-
-      await supabase.from(table).insert([data])
+      await supabase.from('reviews_employee').insert([{
+        company_id: company?.id,
+        rating_overall: form.rating_overall,
+        rating_worklife: form.rating_worklife || null,
+        rating_culture: form.rating_culture || null,
+        rating_management: form.rating_management || null,
+        rating_compensation: form.rating_compensation || null,
+        rating_career: form.rating_career || null,
+        title: form.title,
+        pros: form.pros || null,
+        cons: form.cons || null,
+        advice_to_management: form.advice || null,
+        is_current_employee: form.is_current_employee,
+        position_category: form.position_category || null,
+        employment_year_start: form.year_start ? parseInt(form.year_start) : null,
+        employment_year_end: form.year_end ? parseInt(form.year_end) : null,
+        recommend: form.recommend,
+        ceo_approval: form.ceo_approval || null,
+        business_outlook: form.business_outlook || null,
+        is_published: true,
+        verification_status: 'unverified',
+      }])
       setSubmitted(true)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsSubmitting(false)
-    }
+    } catch (err) { console.error(err) }
+    finally { setIsSubmitting(false) }
   }
 
-  if (submitted) return <SuccessScreen companyName={selectedCompany?.name || ''} type={reviewType} />
+  if (submitted) return <SuccessScreen name={company?.name || ''} />
+
+  const steps = [
+    { n: 1, label: 'Компания' },
+    { n: 2, label: 'О работе' },
+    { n: 3, label: 'Оценки' },
+    { n: 4, label: 'Отзыв' },
+    { n: 5, label: 'Финал' },
+  ]
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10 px-4">
+    <div className="bg-gray-50 min-h-screen py-8 px-4">
       <div className="max-w-2xl mx-auto">
 
         {/* Прогресс */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
-            <span>Шаг {Math.min(step, totalSteps)} из {totalSteps}</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-600 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        <div className="flex items-center justify-between mb-8">
+          {steps.map((s, i) => (
+            <div key={s.n} className="flex items-center">
+              <div className={`flex flex-col items-center`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                  step > s.n ? 'bg-blue-600 text-white' :
+                  step === s.n ? 'bg-blue-600 text-white' :
+                  'bg-gray-200 text-gray-400'
+                }`}>
+                  {step > s.n ? <CheckCircle2 className="w-4 h-4" /> : s.n}
+                </div>
+                <span className={`text-xs mt-1 hidden sm:block ${step === s.n ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
+                  {s.label}
+                </span>
+              </div>
+              {i < steps.length - 1 && (
+                <div className={`h-0.5 w-8 sm:w-16 mx-1 sm:mx-2 ${step > s.n ? 'bg-blue-600' : 'bg-gray-200'}`} />
+              )}
+            </div>
+          ))}
         </div>
 
-        {/* Шаги */}
+        {/* Шаг 1: Компания */}
         {step === 1 && (
-          <Step1
-            reviewType={reviewType}
-            onSelect={(type) => { setReviewType(type); setStep(2) }}
-          />
+          <CompanyStep selected={company} onSelect={setCompany} onNext={() => setStep(2)} />
         )}
+
+        {/* Шаг 2: О работе */}
         {step === 2 && (
-          <Step2
-            selectedCompany={selectedCompany}
-            onSelect={(company: { id: string; name: string; bin: string }) => setSelectedCompany(company)}
-            onNext={() => setStep(3)}
-            onBack={() => setStep(1)}
-          />
+          <WorkStep form={form} set={set} onNext={() => setStep(3)} onBack={() => setStep(1)} />
         )}
+
+        {/* Шаг 3: Оценки */}
         {step === 3 && (
-          <Step3
-            reviewType={reviewType}
-            empForm={empForm}
-            cptyForm={cptyForm}
-            onEmpChange={(field: string, val: any) => setEmpForm(p => ({ ...p, [field]: val }))}
-            onCptyChange={(field: string, val: any) => setCptyForm(p => ({ ...p, [field]: val }))}
-            onNext={() => setStep(4)}
-            onBack={() => setStep(2)}
-          />
+          <RatingsStep form={form} set={set} onNext={() => setStep(4)} onBack={() => setStep(2)} />
         )}
+
+        {/* Шаг 4: Текст отзыва */}
         {step === 4 && (
-          <Step4
-            reviewType={reviewType}
-            verifyMethod={verifyMethod}
-            verifyValue={verifyValue}
-            onMethodChange={setVerifyMethod}
-            onValueChange={setVerifyValue}
+          <ReviewStep form={form} set={set} onNext={() => setStep(5)} onBack={() => setStep(3)} />
+        )}
+
+        {/* Шаг 5: Финальные вопросы */}
+        {step === 5 && (
+          <FinalStep
+            form={form} set={set}
             isSubmitting={isSubmitting}
-            onSubmit={handleSubmit}
-            onBack={() => setStep(3)}
+            onSubmit={handleSubmit} onBack={() => setStep(4)}
           />
         )}
       </div>
@@ -190,57 +145,8 @@ function AddReviewContent() {
   )
 }
 
-// ─── Шаг 1: Тип отзыва ───────────────────────────────────
-function Step1({ reviewType, onSelect }: { reviewType: ReviewType; onSelect: (t: ReviewType) => void }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Оставить отзыв</h1>
-      <p className="text-gray-500 mb-8">Ваш опыт помогает другим принимать взвешенные решения.</p>
-
-      <div className="space-y-3">
-        <TypeCard
-          icon={Users}
-          selected={reviewType === 'employee'}
-          title="Отзыв сотрудника"
-          desc="Расскажите о работе в компании — зарплата, культура, руководство"
-          onClick={() => onSelect('employee')}
-        />
-        <TypeCard
-          icon={Handshake}
-          selected={reviewType === 'counterparty'}
-          title="Отзыв контрагента"
-          desc="Поделитесь опытом сотрудничества — оплата, коммуникация, качество"
-          onClick={() => onSelect('counterparty')}
-        />
-      </div>
-    </div>
-  )
-}
-
-function TypeCard({ icon: Icon, selected, title, desc, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all ${
-        selected
-          ? 'border-blue-500 bg-blue-50'
-          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-      }`}
-    >
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${selected ? 'bg-blue-100' : 'bg-gray-100'}`}>
-        <Icon className={`w-6 h-6 ${selected ? 'text-blue-600' : 'text-gray-400'}`} />
-      </div>
-      <div>
-        <div className={`font-semibold ${selected ? 'text-blue-900' : 'text-gray-900'}`}>{title}</div>
-        <div className="text-sm text-gray-500">{desc}</div>
-      </div>
-      {selected && <ChevronRight className="w-5 h-5 text-blue-500 ml-auto flex-shrink-0" />}
-    </button>
-  )
-}
-
-// ─── Шаг 2: Выбор компании ───────────────────────────────
-function Step2({ selectedCompany, onSelect, onNext, onBack }: any) {
+// ─── Шаг 1: Выбор компании ───────────────────────────────
+function CompanyStep({ selected, onSelect, onNext }: any) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -249,35 +155,29 @@ function Step2({ selectedCompany, onSelect, onNext, onBack }: any) {
     if (q.trim().length < 2) { setResults([]); return }
     setLoading(true)
     try {
-      const supabase = createClient()
-      const { data } = await supabase.rpc('search_companies', { p_query: q.trim(), p_limit: 6, p_offset: 0 })
+      const { data } = await createClient().rpc('search_companies', { p_query: q.trim(), p_limit: 6, p_offset: 0 })
       setResults(data || [])
     } finally { setLoading(false) }
   }, [])
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-8">
-      <h2 className="text-xl font-bold text-gray-900 mb-1">О какой компании?</h2>
-      <p className="text-gray-500 mb-6">Найдите компанию по названию или БИН</p>
-
+    <Card title="О какой компании хотите написать?" subtitle="Найдите компанию по названию или БИН">
       <div className="relative mb-4">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          value={query}
-          onChange={e => { setQuery(e.target.value); search(e.target.value) }}
+        <input value={query} onChange={e => { setQuery(e.target.value); search(e.target.value) }}
           placeholder="Название или БИН..."
-          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400"
-        />
-        {loading && <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />}
+          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" />
+        {loading && <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />}
       </div>
 
       {results.length > 0 && (
         <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
           {results.map(r => (
-            <button key={r.id}
-              onClick={() => { onSelect({ id: r.id, name: r.name_ru, bin: r.bin }); setQuery(r.name_ru); setResults([]) }}
+            <button key={r.id} onClick={() => { onSelect({ id: r.id, name: r.name_ru, bin: r.bin }); setQuery(r.name_ru); setResults([]) }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-none text-left">
-              <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-4 h-4 text-gray-400" />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{r.name_ru}</div>
                 <div className="text-xs text-gray-400">{r.bin} · {r.city}</div>
@@ -287,265 +187,250 @@ function Step2({ selectedCompany, onSelect, onNext, onBack }: any) {
         </div>
       )}
 
-      {selectedCompany?.name && (
-        <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl mb-6">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-          <span className="text-sm font-medium text-emerald-800">{selectedCompany.name}</span>
+      {selected?.name && (
+        <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl mb-6">
+          <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
+          <span className="text-sm font-medium text-blue-900">{selected.name}</span>
         </div>
       )}
 
-      <NavButtons
-        onBack={onBack}
-        onNext={onNext}
-        nextDisabled={!selectedCompany?.id}
-        nextLabel="Продолжить"
-      />
-    </div>
+      <NavBtn onNext={onNext} nextDisabled={!selected?.id} nextLabel="Продолжить" showBack={false} />
+    </Card>
   )
 }
 
-// ─── Шаг 3: Контент отзыва ───────────────────────────────
-function Step3({ reviewType, empForm, cptyForm, onEmpChange, onCptyChange, onNext, onBack }: any) {
-  const isEmp = reviewType === 'employee'
-  const ratings = isEmp
-    ? [
-        { key: 'rating_overall', label: 'Общая оценка', required: true },
-        { key: 'rating_salary', label: 'Зарплата и льготы', required: false },
-        { key: 'rating_management', label: 'Руководство', required: false },
-        { key: 'rating_culture', label: 'Корпоративная культура', required: false },
-        { key: 'rating_growth', label: 'Возможности роста', required: false },
-      ]
-    : [
-        { key: 'rating_overall', label: 'Общая оценка', required: true },
-        { key: 'rating_payment', label: 'Платёжная дисциплина', required: false },
-        { key: 'rating_communication', label: 'Коммуникация', required: false },
-        { key: 'rating_quality', label: 'Качество работ', required: false },
-      ]
-
-  const form = isEmp ? empForm : cptyForm
-  const onChange = isEmp ? onEmpChange : onCptyChange
-
-  const canProceed = form.rating_overall > 0 && form.title.trim().length > 0 &&
-    (isEmp ? (form.pros.trim() || form.cons.trim()) : form.content.trim().length > 0)
-
+// ─── Шаг 2: О работе ─────────────────────────────────────
+function WorkStep({ form, set, onNext, onBack }: any) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-8">
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Ваш опыт</h2>
-      <p className="text-gray-500 mb-6">Будьте честны и конкретны — это поможет другим</p>
-
-      {/* Рейтинги */}
+    <Card title="Расскажите о своей работе" subtitle="Эта информация остаётся анонимной">
       <div className="space-y-4 mb-6">
-        {ratings.map(({ key, label, required }) => (
-          <div key={key}>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="text-sm font-medium text-gray-700">{label}</span>
-              {required && <span className="text-red-500 text-xs">*</span>}
+        {/* Статус */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Вы сейчас работаете в этой компании?</label>
+          <div className="flex gap-3">
+            {[{ v: true, l: 'Работаю сейчас' }, { v: false, l: 'Бывший сотрудник' }].map(opt => (
+              <button key={String(opt.v)} onClick={() => set('is_current_employee', opt.v)}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
+                  form.is_current_employee === opt.v
+                    ? 'border-blue-500 bg-blue-50 text-blue-800'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}>
+                {opt.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Категория */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Направление работы</label>
+          <select value={form.position_category} onChange={e => set('position_category', e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 bg-white">
+            <option value="">Выберите...</option>
+            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        {/* Годы */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Год начала</label>
+            <select value={form.year_start} onChange={e => set('year_start', e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 bg-white">
+              <option value="">Год...</option>
+              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          {!form.is_current_employee && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Год окончания</label>
+              <select value={form.year_end} onChange={e => set('year_end', e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 bg-white">
+                <option value="">Год...</option>
+                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
             </div>
-            <StarPicker value={form[key]} onChange={v => onChange(key, v)} />
+          )}
+        </div>
+      </div>
+      <NavBtn onBack={onBack} onNext={onNext} nextLabel="Далее" />
+    </Card>
+  )
+}
+
+// ─── Шаг 3: Оценки ───────────────────────────────────────
+function RatingsStep({ form, set, onNext, onBack }: any) {
+  const canProceed = form.rating_overall > 0
+  return (
+    <Card title="Оцените компанию" subtitle="Звёздочки помогают другим быстро понять ситуацию">
+      <div className="space-y-5 mb-6">
+        {RATINGS.map(({ key, label, required }) => (
+          <div key={key} className={`${required ? '' : 'opacity-90'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <label className={`text-sm font-medium ${required ? 'text-gray-900' : 'text-gray-600'}`}>
+                {label} {required && <span className="text-red-500">*</span>}
+              </label>
+              {form[key] > 0 && (
+                <span className="text-xs text-gray-400">
+                  {['','Очень плохо','Плохо','Нормально','Хорошо','Отлично'][form[key]]}
+                </span>
+              )}
+            </div>
+            <StarPicker value={form[key]} onChange={v => set(key, v)} />
           </div>
         ))}
       </div>
+      <NavBtn onBack={onBack} onNext={onNext} nextDisabled={!canProceed} nextLabel="Далее" />
+    </Card>
+  )
+}
 
-      {/* Метаданные для сотрудника */}
-      {isEmp && (
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Категория должности</label>
-            <select value={empForm.position_category} onChange={e => onEmpChange('position_category', e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
-              <option value="">Выберите...</option>
-              {POSITION_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Год начала работы</label>
-            <select value={empForm.year_start} onChange={e => onEmpChange('year_start', e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
-              <option value="">Год...</option>
-              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* Для контрагента */}
-      {!isEmp && (
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Год сделки</label>
-            <select value={cptyForm.deal_year} onChange={e => onCptyChange('deal_year', e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
-              <option value="">Год...</option>
-              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Тип сделки</label>
-            <select value={cptyForm.deal_type} onChange={e => onCptyChange('deal_type', e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
-              <option value="">Выберите...</option>
-              {DEAL_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* Текст */}
-      <div className="space-y-4">
-        <Field label="Заголовок отзыва *" required>
-          <input value={form.title} onChange={e => onChange('title', e.target.value)}
-            placeholder={isEmp ? 'Например: Хорошее место для роста, но есть нюансы' : 'Кратко опишите опыт'}
+// ─── Шаг 4: Текст отзыва ─────────────────────────────────
+function ReviewStep({ form, set, onNext, onBack }: any) {
+  const canProceed = form.title.trim().length >= 5 && (form.pros.trim() || form.cons.trim())
+  return (
+    <Card title="Напишите отзыв" subtitle="Будьте конкретны — это помогает другим кандидатам">
+      <div className="space-y-4 mb-6">
+        <Field label="Заголовок" required>
+          <input value={form.title} onChange={e => set('title', e.target.value)}
+            placeholder="Например: Хорошая компания, но высокий темп работы"
+            maxLength={100}
             className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" />
         </Field>
 
-        {isEmp ? (
-          <>
-            <Field label="Плюсы">
-              <textarea value={empForm.pros} onChange={e => onEmpChange('pros', e.target.value)}
-                rows={3} placeholder="Что вам нравилось в этой компании?"
-                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" />
-            </Field>
-            <Field label="Минусы">
-              <textarea value={empForm.cons} onChange={e => onEmpChange('cons', e.target.value)}
-                rows={3} placeholder="Что можно было бы улучшить?"
-                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" />
-            </Field>
-          </>
-        ) : (
-          <Field label="Подробный отзыв *" required>
-            <textarea value={cptyForm.content} onChange={e => onCptyChange('content', e.target.value)}
-              rows={5} placeholder="Опишите ваш опыт работы с этой компанией..."
-              className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" />
-          </Field>
-        )}
-      </div>
+        <Field label="Плюсы">
+          <textarea value={form.pros} onChange={e => set('pros', e.target.value)} rows={3}
+            placeholder="Что вам нравится? Команда, проекты, офис, бенефиты..."
+            className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" />
+        </Field>
 
-      <div className="mt-6">
-        <NavButtons onBack={onBack} onNext={onNext} nextDisabled={!canProceed} nextLabel="Далее" />
+        <Field label="Минусы">
+          <textarea value={form.cons} onChange={e => set('cons', e.target.value)} rows={3}
+            placeholder="Что можно улучшить? Процессы, коммуникация, зарплата..."
+            className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" />
+        </Field>
+
+        <Field label="Совет руководству">
+          <textarea value={form.advice} onChange={e => set('advice', e.target.value)} rows={2}
+            placeholder="Что бы вы посоветовали руководству?"
+            className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" />
+        </Field>
       </div>
-    </div>
+      <NavBtn onBack={onBack} onNext={onNext} nextDisabled={!canProceed} nextLabel="Далее" />
+    </Card>
   )
 }
 
-// ─── Шаг 4: Верификация ───────────────────────────────────
-function Step4({ reviewType, verifyMethod, verifyValue, onMethodChange, onValueChange, isSubmitting, onSubmit, onBack }: any) {
-  const isEmp = reviewType === 'employee'
-
-  const methods = isEmp
-    ? [
-        { id: 'email', icon: Mail, label: 'Корпоративная почта', desc: 'Введите email @company.kz — отправим код подтверждения' },
-        { id: 'contract', icon: FileText, label: 'Трудовой договор', desc: 'Загрузите фото договора (лицо и ИИН можно закрыть)' },
-        { id: 'linkedin', icon: Linkedin, label: 'LinkedIn профиль', desc: 'Вставьте ссылку на профиль с историей работы' },
-      ]
-    : [
-        { id: 'email', icon: Mail, label: 'Рабочая почта', desc: 'Подтвердите через корпоративный email' },
-        { id: 'contract', icon: FileText, label: 'Счёт-фактура', desc: 'Введите номер счёта-фактуры или договора' },
-      ]
-
+// ─── Шаг 5: Финальные вопросы ─────────────────────────────
+function FinalStep({ form, set, isSubmitting, onSubmit, onBack }: any) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-8">
-      <div className="flex items-center gap-3 mb-2">
-        <ShieldCheck className="w-6 h-6 text-blue-600" />
-        <h2 className="text-xl font-bold text-gray-900">Подтвердите отзыв</h2>
-      </div>
-      <p className="text-gray-500 mb-6">
-        Верификация защищает платформу от фейков. Ваши персональные данные не публикуются.
-      </p>
+    <Card title="Последние вопросы" subtitle="Как у Glassdoor — ещё три быстрых вопроса">
+      <div className="space-y-6 mb-6">
 
-      {/* Методы верификации */}
-      <div className="space-y-2.5 mb-6">
-        {methods.map(({ id, icon: Icon, label, desc }) => (
-          <button key={id} onClick={() => onMethodChange(id)}
-            className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all ${
-              verifyMethod === id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-            }`}>
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${verifyMethod === id ? 'bg-blue-100' : 'bg-gray-100'}`}>
-              <Icon className={`w-5 h-5 ${verifyMethod === id ? 'text-blue-600' : 'text-gray-400'}`} />
-            </div>
-            <div>
-              <div className={`text-sm font-medium ${verifyMethod === id ? 'text-blue-900' : 'text-gray-800'}`}>{label}</div>
-              <div className="text-xs text-gray-400">{desc}</div>
-            </div>
-          </button>
-        ))}
+        {/* Рекомендуете? */}
+        <div>
+          <label className="text-sm font-medium text-gray-900 mb-3 block">
+            Вы бы порекомендовали эту компанию другу?
+          </label>
+          <div className="flex gap-3">
+            <TwoBtn icon={ThumbsUp} label="Да" active={form.recommend === true} onClick={() => set('recommend', true)} color="emerald" />
+            <TwoBtn icon={ThumbsDown} label="Нет" active={form.recommend === false} onClick={() => set('recommend', false)} color="red" />
+          </div>
+        </div>
+
+        {/* Одобряете CEO? */}
+        <div>
+          <label className="text-sm font-medium text-gray-900 mb-3 block">
+            Как вы оцениваете руководство компании?
+          </label>
+          <div className="flex gap-2">
+            {[
+              { v: 'positive', l: 'Позитивно', icon: ThumbsUp },
+              { v: 'neutral', l: 'Нейтрально', icon: Minus },
+              { v: 'negative', l: 'Негативно', icon: ThumbsDown },
+            ].map(opt => (
+              <button key={opt.v} onClick={() => set('ceo_approval', opt.v)}
+                className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-medium transition-colors ${
+                  form.ceo_approval === opt.v
+                    ? 'border-blue-500 bg-blue-50 text-blue-800'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}>
+                <opt.icon className="w-4 h-4" />
+                {opt.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Перспективы */}
+        <div>
+          <label className="text-sm font-medium text-gray-900 mb-3 block">
+            Перспективы развития компании?
+          </label>
+          <div className="flex gap-2">
+            {[
+              { v: 'positive', l: 'Растёт', icon: TrendingUp },
+              { v: 'neutral', l: 'Стабильно', icon: Minus },
+              { v: 'negative', l: 'Снижается', icon: TrendingDown },
+            ].map(opt => (
+              <button key={opt.v} onClick={() => set('business_outlook', opt.v)}
+                className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-medium transition-colors ${
+                  form.business_outlook === opt.v
+                    ? 'border-blue-500 bg-blue-50 text-blue-800'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}>
+                <opt.icon className="w-4 h-4" />
+                {opt.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-500 leading-relaxed">
+          Ваш отзыв анонимен. Мы не собираем ваши личные данные. Нажимая «Опубликовать», вы соглашаетесь с правилами платформы.
+        </div>
       </div>
 
-      {/* Поле ввода верификации */}
-      <div className="mb-6">
-        <input value={verifyValue} onChange={e => onValueChange(e.target.value)}
-          placeholder={
-            verifyMethod === 'email' ? 'email@company.kz' :
-            verifyMethod === 'linkedin' ? 'https://linkedin.com/in/...' :
-            isEmp ? 'Номер договора или дата' : 'Номер счёта-фактуры'
-          }
-          className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400"
-        />
-      </div>
-
-      {/* Дисклеймер */}
-      <div className="bg-gray-50 rounded-xl p-4 mb-6 text-xs text-gray-500 leading-relaxed">
-        <strong className="text-gray-700">Анонимность гарантирована.</strong> Верификационные данные используются только для проверки и не публикуются. Отзыв выйдет под анонимным профилем.
-      </div>
-
-      <NavButtons
-        onBack={onBack}
-        onNext={onSubmit}
-        nextDisabled={!verifyValue.trim() || isSubmitting}
-        nextLabel={isSubmitting ? 'Отправляем...' : 'Отправить отзыв'}
-        isLoading={isSubmitting}
-      />
-    </div>
+      <NavBtn onBack={onBack} onNext={onSubmit} nextLabel={isSubmitting ? 'Публикуем...' : 'Опубликовать отзыв'} isLoading={isSubmitting} />
+    </Card>
   )
 }
 
 // ─── Успех ───────────────────────────────────────────────
-function SuccessScreen({ companyName, type }: { companyName: string; type: ReviewType }) {
+function SuccessScreen({ name }: { name: string }) {
   return (
-    <div className="bg-gray-50 min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl border border-gray-200 p-10 max-w-md w-full text-center">
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Отзыв отправлен!</h2>
-        <p className="text-gray-500 mb-6">
-          Спасибо! Ваш отзыв отправлен на модерацию и появится на странице компании в течение 24 часов.
-        </p>
-        <a href={`/search`}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm">
-          Вернуться к поиску
-        </a>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Отзыв опубликован!</h2>
+        <p className="text-gray-500 text-sm mb-6">Спасибо! Ваш опыт поможет другим принять взвешенное решение о карьере.</p>
+        <div className="flex gap-3 justify-center">
+          <a href="/reviews/add" className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg">
+            Ещё отзыв
+          </a>
+          <a href="/search" className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+            К поиску
+          </a>
+        </div>
       </div>
     </div>
   )
 }
 
 // ─── Вспомогательные компоненты ───────────────────────────
-function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const [hovered, setHovered] = useState(0)
+function Card({ title, subtitle, children }: any) {
   return (
-    <div className="flex gap-1">
-      {[1,2,3,4,5].map(s => (
-        <button key={s} type="button"
-          onMouseEnter={() => setHovered(s)} onMouseLeave={() => setHovered(0)}
-          onClick={() => onChange(s)}
-          className="transition-transform hover:scale-110">
-          <Star className={`w-7 h-7 transition-colors ${
-            s <= (hovered || value)
-              ? 'text-amber-400 fill-amber-400'
-              : 'text-gray-200 hover:text-amber-300'
-          }`} />
-        </button>
-      ))}
-      {value > 0 && (
-        <span className="ml-2 text-sm text-gray-500 self-center">
-          {['', 'Очень плохо', 'Плохо', 'Нормально', 'Хорошо', 'Отлично'][value]}
-        </span>
-      )}
+    <div className="bg-white rounded-2xl border border-gray-200 p-7">
+      <h2 className="text-xl font-bold text-gray-900 mb-1">{title}</h2>
+      {subtitle && <p className="text-gray-500 text-sm mb-6">{subtitle}</p>}
+      {children}
     </div>
   )
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, children }: any) {
   return (
     <div>
       <label className="text-sm font-medium text-gray-700 mb-1.5 block">
@@ -556,18 +441,45 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-function NavButtons({ onBack, onNext, nextDisabled, nextLabel, isLoading }: any) {
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0)
+  return (
+    <div className="flex gap-1">
+      {[1,2,3,4,5].map(s => (
+        <button key={s} type="button"
+          onMouseEnter={() => setHovered(s)} onMouseLeave={() => setHovered(0)}
+          onClick={() => onChange(s === value ? 0 : s)}>
+          <Star className={`w-8 h-8 transition-colors ${s <= (hovered || value) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-300'}`} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function TwoBtn({ icon: Icon, label, active, onClick, color }: any) {
+  const colors: any = {
+    emerald: active ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-gray-200 text-gray-500 hover:border-gray-300',
+    red: active ? 'border-red-500 bg-red-50 text-red-800' : 'border-gray-200 text-gray-500 hover:border-gray-300',
+  }
+  return (
+    <button onClick={onClick}
+      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-medium transition-colors ${colors[color]}`}>
+      <Icon className="w-4 h-4" />{label}
+    </button>
+  )
+}
+
+function NavBtn({ onBack, onNext, nextDisabled, nextLabel, isLoading, showBack = true }: any) {
   return (
     <div className="flex items-center justify-between pt-2">
-      <button onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 font-medium">
-        <ChevronLeft className="w-4 h-4" /> Назад
-      </button>
-      <button onClick={onNext} disabled={nextDisabled}
+      {showBack ? (
+        <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 font-medium">
+          <ChevronLeft className="w-4 h-4" /> Назад
+        </button>
+      ) : <div />}
+      <button onClick={onNext} disabled={nextDisabled || isLoading}
         className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
-          nextDisabled
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700 text-white'
+          nextDisabled || isLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
         }`}>
         {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
         {nextLabel}
@@ -577,14 +489,11 @@ function NavButtons({ onBack, onNext, nextDisabled, nextLabel, isLoading }: any)
   )
 }
 
-// ↓ ЭТО должно быть СНАРУЖИ всех функций, в самом конце файла
-import { Suspense } from 'react'
-
 export default function AddReviewPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-400 text-sm">Загрузка...</div>
+        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
       </div>
     }>
       <AddReviewContent />
