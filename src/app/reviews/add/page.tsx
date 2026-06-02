@@ -167,8 +167,8 @@ export default function AddReviewPage() {
             reviewType={reviewType}
             empForm={empForm}
             cptyForm={cptyForm}
-            onEmpChange={(field, val) => setEmpForm(p => ({ ...p, [field]: val }))}
-            onCptyChange={(field, val) => setCptyForm(p => ({ ...p, [field]: val }))}
+            onEmpChange={(field: string, val: any) => setEmpForm(p => ({ ...p, [field]: val }))}
+            onCptyChange={(field: string, val: any) => setCptyForm(p => ({ ...p, [field]: val }))}
             onNext={() => setStep(4)}
             onBack={() => setStep(2)}
           />
