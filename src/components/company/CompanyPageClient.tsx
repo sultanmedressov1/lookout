@@ -19,7 +19,7 @@ interface Props {
   cptyReviews: CounterpartyReview[]
 }
 
-type Tab = 'overview' | 'reviews' | 'salaries' | 'courts'
+type Tab = 'overview' | 'reviews' | 'salaries' | 'jobs' | 'courts'
 
 const RATING_LABELS = ['','Очень плохо','Плохо','Нормально','Хорошо','Отлично']
 
@@ -40,6 +40,7 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
   const tabs = [
     { id: 'reviews' as Tab, label: 'Отзывы', count: totalReviews },
     { id: 'salaries' as Tab, label: 'Зарплаты', count: 0 },
+    { id: 'jobs' as Tab, label: 'Вакансии', count: null },
     { id: 'courts' as Tab, label: 'Суды', count: company.court_cases_count },
     { id: 'overview' as Tab, label: 'Обзор', count: null },
   ]
@@ -170,6 +171,7 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
           <div className="lg:col-span-2">
             {tab === 'reviews' && <ReviewsTab reviews={empReviews} companyId={company.id} />}
             {tab === 'salaries' && <SalariesTab companyId={company.id} salaries={[]} />}
+            {tab === 'jobs' && <JobsTab companyId={company.id} companyName={company.name_ru} />}
             {tab === 'courts' && <CourtsTab cases={courtCases} total={company.court_cases_count} />}
             {tab === 'overview' && <OverviewTab company={company} taxRecords={taxRecords} />}
           </div>
@@ -672,6 +674,34 @@ function SidebarInfo({ company }: { company: Company }) {
             {getStatusLabel(company.status)}
           </span>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Вкладка Вакансии ─────────────────────────────────────
+function JobsTab({ companyId, companyName }: { companyId: string; companyName: string }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-gray-900">Вакансии</h2>
+        <Link href={`/jobs/add`}
+          className="text-sm font-medium text-blue-600 hover:text-blue-800">
+          + Разместить вакансию
+        </Link>
+      </div>
+      <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+          <Users className="w-5 h-5 text-gray-400" />
+        </div>
+        <h3 className="font-semibold text-gray-900 mb-1">Вакансий пока нет</h3>
+        <p className="text-sm text-gray-400 mb-4">
+          Разместите вакансию рядом с отзывами о компании — соискатели увидят её в контексте
+        </p>
+        <Link href="/jobs/add"
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+          Разместить вакансию
+        </Link>
       </div>
     </div>
   )
