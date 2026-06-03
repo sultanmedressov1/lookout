@@ -169,7 +169,7 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
 
           <div className="lg:col-span-2">
             {tab === 'reviews' && <ReviewsTab reviews={empReviews} companyId={company.id} />}
-            {tab === 'salaries' && <SalariesTab companyId={company.id} companyName={company.name_ru} />}
+            {tab === 'salaries' && <SalariesTab companyId={company.id} salaries={[]} />}
             {tab === 'courts' && <CourtsTab cases={courtCases} total={company.court_cases_count} />}
             {tab === 'overview' && <OverviewTab company={company} taxRecords={taxRecords} />}
           </div>
@@ -421,27 +421,122 @@ function ReviewCard({ review }: { review: any }) {
 }
 
 // ─── Вкладка Зарплаты ─────────────────────────────────────
-function SalariesTab({ companyId, companyName }: { companyId: string; companyName: string }) {
+function SalariesTab({ companyId, salaries }: { companyId: string; salaries: any[] }) {
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} млн ₸`
+    if (n >= 1_000) return `${Math.round(n / 1_000)} тыс ₸`
+    return `${n} ₸`
+  }
+
+  const levelLabels: Record<string, string> = {
+    intern: 'Стажёр', junior: 'Junior', middle: 'Middle',
+    senior: 'Senior', lead: 'Lead', manager: 'Менеджер', director: 'Директор'
+  }
+
+  // Группировка по категории
+  const byCategory: Record<string, number[]> = {}
+  salaries.forEach(s => {
+    const key = s.position_category || 'Другое'
+    if (!byCategory[key]) byCategory[key] = []
+    byCategory[key].push(s.salary_monthly)
+  })
+
+  const categoryStats = Object.entries(byCategory).map(([cat, vals]) => ({
+    cat,
+    avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
+    min: Math.min(...vals),
+    max: Math.max(...vals),
+    count: vals.length,
+  })).sort((a, b) => b.avg - a.avg)
+
+  const overallAvg = salaries.length
+    ? Math.round(salaries.reduce((a, s) => a + s.salary_monthly, 0) / salaries.length)
+    : 0
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900">Зарплаты</h2>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-gray-900">
+          Зарплаты {salaries.length > 0 && <span className="text-gray-400 font-normal">({salaries.length})</span>}
+        </h2>
         <Link href={`/salaries/add?company=${companyId}`}
           className="text-sm font-medium text-blue-600 hover:text-blue-800">
           + Добавить зарплату
         </Link>
       </div>
-      <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-        <DollarSign className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-        <h3 className="font-semibold text-gray-900 mb-1">Зарплаты пока не добавлены</h3>
-        <p className="text-sm text-gray-400 mb-4">
-          Поделитесь своей зарплатой анонимно — это помогает другим знать рыночный уровень
-        </p>
-        <Link href={`/salaries/add?company=${companyId}`}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
-          Добавить зарплату
-        </Link>
-      </div>
+
+      {salaries.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+          <DollarSign className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+          <h3 className="font-semibold text-gray-900 mb-1">Зарплат пока нет</h3>
+          <p className="text-sm text-gray-400 mb-4">Поделитесь анонимно — помогите другим узнать рыночный уровень</p>
+          <Link href={`/salaries/add?company=${companyId}`}
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
+            Добавить зарплату
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Средняя по компании */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+            <div className="text-sm text-blue-600 font-medium mb-1">Средняя зарплата</div>
+            <div className="text-3xl font-bold text-gray-900">{fmt(overallAvg)}<span className="text-base font-normal text-gray-400">/мес</span></div>
+            <div className="text-xs text-gray-400 mt-1">на основе {salaries.length} {salaries.length === 1 ? 'зарплаты' : 'зарплат'}</div>
+          </div>
+
+          {/* По категориям */}
+          {categoryStats.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100 font-semibold text-sm text-gray-900">По направлениям</div>
+              {categoryStats.map(({ cat, avg, min, max, count }) => (
+                <div key={cat} className="px-5 py-3.5 border-b border-gray-50 last:border-none">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">{cat}</span>
+                    <span className="text-sm font-bold text-gray-900">{fmt(avg)}/мес</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(avg / Math.max(...categoryStats.map(c => c.max))) * 100}%` }} />
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">{count} {count === 1 ? 'чел.' : 'чел.'}</span>
+                  </div>
+                  {min !== max && (
+                    <div className="text-xs text-gray-400 mt-0.5">{fmt(min)} — {fmt(max)}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Список */}
+          <div className="space-y-3">
+            {salaries.map(s => (
+              <div key={s.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <span className="text-sm font-medium text-gray-900">{s.position_title}</span>
+                      {s.experience_level && (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                          {levelLabels[s.experience_level] || s.experience_level}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-3 text-xs text-gray-400">
+                      {s.city && <span>{s.city}</span>}
+                      {s.year && <span>{s.year}</span>}
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-base font-bold text-gray-900">{fmt(s.salary_monthly)}<span className="text-xs font-normal text-gray-400">/мес</span></div>
+                    {s.bonus_annual && <div className="text-xs text-emerald-600">+{fmt(s.bonus_annual)} бонус</div>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
