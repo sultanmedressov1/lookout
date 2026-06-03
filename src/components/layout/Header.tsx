@@ -65,6 +65,15 @@ export function Header() {
                     {user.user_metadata?.company_name?.split(' ')[0] || 'Панель'}
                   </Link>
                 )}
+                {!isBusiness && (
+                  <Link href="/profile"
+                    className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                    {user.user_metadata?.name || 'Профиль'}
+                  </Link>
+                )}
+                {user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL && (
+                  <Link href="/admin" className="px-3 py-2 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">Admin</Link>
+                )}
                 <button onClick={handleSignOut}
                   className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
                   Выйти
@@ -75,6 +84,10 @@ export function Header() {
                 <Link href="/auth/signin"
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                   Войти
+                </Link>
+                <Link href="/auth/signup"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
+                  Регистрация
                 </Link>
                 <Link href="/auth/business"
                   className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">

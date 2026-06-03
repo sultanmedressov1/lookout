@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Star, Building2, MapPin, Calendar, Briefcase,
@@ -9,6 +9,7 @@ import {
   Users, DollarSign, AlertTriangle, Scale
 } from 'lucide-react'
 import { formatDate, formatBin, getStatusLabel, getStatusColor, formatMoney, timeAgo } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 import type { Company, CourtCase, TaxRecord, EmployeeReview, CounterpartyReview } from '@/types'
 
 interface Props {
@@ -19,7 +20,7 @@ interface Props {
   cptyReviews: CounterpartyReview[]
 }
 
-type Tab = 'overview' | 'reviews' | 'salaries' | 'jobs' | 'courts'
+type Tab = 'overview' | 'reviews' | 'interviews' | 'salaries' | 'jobs' | 'courts'
 
 const RATING_LABELS = ['','Очень плохо','Плохо','Нормально','Хорошо','Отлично']
 
@@ -39,6 +40,7 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
 
   const tabs = [
     { id: 'reviews' as Tab, label: 'Отзывы', count: totalReviews },
+    { id: 'interviews' as Tab, label: 'Интервью', count: null },
     { id: 'salaries' as Tab, label: 'Зарплаты', count: 0 },
     { id: 'jobs' as Tab, label: 'Вакансии', count: null },
     { id: 'courts' as Tab, label: 'Суды', count: company.court_cases_count },
@@ -170,6 +172,7 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
 
           <div className="lg:col-span-2">
             {tab === 'reviews' && <ReviewsTab reviews={empReviews} companyId={company.id} />}
+            {tab === 'interviews' && <InterviewsTab companyId={company.id} />}
             {tab === 'salaries' && <SalariesTab companyId={company.id} salaries={[]} />}
             {tab === 'jobs' && <JobsTab companyId={company.id} companyName={company.name_ru} />}
             {tab === 'courts' && <CourtsTab cases={courtCases} total={company.court_cases_count} />}
@@ -703,6 +706,81 @@ function JobsTab({ companyId, companyName }: { companyId: string; companyName: s
           Разместить вакансию
         </Link>
       </div>
+    </div>
+  )
+}
+
+// ─── Вкладка Интервью ─────────────────────────────────────
+function InterviewsTab({ companyId }: { companyId: string }) {
+  const [interviews, setInterviews] = useState<any[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    createClient()
+      .from('reviews_interview')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setInterviews(data || []); setLoaded(true) })
+  }, [companyId])
+
+  const expLabels: Record<string, string> = { positive: '👍 Позитивное', neutral: '😐 Нейтральное', negative: '👎 Негативное' }
+  const diffLabels: Record<string, string> = { easy: 'Лёгкое', average: 'Среднее', difficult: 'Сложное' }
+  const offerLabels: Record<string, string> = { yes: 'Получил оффер', no: 'Не предложили', declined: 'Отказался' }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-gray-900">
+          Отзывы об интервью {interviews.length > 0 && <span className="text-gray-400 font-normal">({interviews.length})</span>}
+        </h2>
+        <Link href={`/interviews/add?company=${companyId}`} className="text-sm font-medium text-blue-600 hover:text-blue-800">
+          + Написать отзыв
+        </Link>
+      </div>
+
+      {!loaded ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400 text-sm">Загружаем...</div>
+      ) : interviews.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+          <Briefcase className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+          <h3 className="font-semibold text-gray-900 mb-1">Отзывов об интервью пока нет</h3>
+          <p className="text-sm text-gray-400 mb-4">Поделитесь опытом прохождения интервью</p>
+          <Link href={`/interviews/add?company=${companyId}`} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
+            Написать отзыв
+          </Link>
+        </div>
+      ) : (
+        interviews.map((iv: any) => (
+          <div key={iv.id} className="bg-white border border-gray-200 rounded-xl p-5">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">{iv.title}</h3>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {iv.experience && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{expLabels[iv.experience]}</span>}
+                  {iv.difficulty && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Сложность: {diffLabels[iv.difficulty]}</span>}
+                  {iv.offer_received && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{offerLabels[iv.offer_received]}</span>}
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="flex justify-end mb-0.5">
+                  {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= iv.rating_overall ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}
+                </div>
+                <div className="text-xs text-gray-400">{timeAgo(iv.created_at)}</div>
+              </div>
+            </div>
+            {iv.description && <p className="text-sm text-gray-700 mb-3 leading-relaxed">{iv.description}</p>}
+            {iv.questions && (
+              <div className="bg-blue-50 rounded-lg p-3">
+                <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Вопросы</div>
+                <p className="text-sm text-gray-700 leading-relaxed">{iv.questions}</p>
+              </div>
+            )}
+            {iv.position_title && <div className="text-xs text-gray-400 mt-2">{iv.position_title}{iv.duration_weeks ? ` · ${iv.duration_weeks} нед.` : ''}</div>}
+          </div>
+        ))
+      )}
     </div>
   )
 }
