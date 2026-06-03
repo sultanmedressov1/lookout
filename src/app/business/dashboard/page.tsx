@@ -1,25 +1,37 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Briefcase, Star, DollarSign, Eye, Settings } from 'lucide-react'
+import { Plus, Briefcase, Star, Eye, DollarSign } from 'lucide-react'
 
 export default async function BusinessDashboard() {
   const supabase = createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Не авторизован
   if (!user) redirect('/auth/signin')
 
-  const meta = user.user_metadata
-  if (meta?.type !== 'business') redirect('/')
+  // Не бизнес-аккаунт
+  if (user.user_metadata?.type !== 'business') redirect('/')
 
-  const companyId = meta.company_id
-  const companyName = meta.company_name
+  // Проверяем модерацию
+  const { data: request } = await supabase
+    .from('business_requests')
+    .select('status')
+    .eq('user_id', user.id)
+    .single()
 
-  // Загружаем статистику
+  if (!request || request.status === 'pending') redirect('/auth/pending')
+  if (request.status === 'rejected') redirect('/auth/signin')
+
+  const companyId = user.user_metadata?.company_id
+  const companyName = user.user_metadata?.company_name
+  const companyBin = user.user_metadata?.company_bin
+
+  // Загружаем данные
   const [jobsRes, reviewsRes] = await Promise.all([
     supabase.from('jobs').select('id, title, is_active, views_count, created_at')
       .eq('company_id', companyId).order('created_at', { ascending: false }),
-    supabase.from('reviews_employee').select('id, rating_overall, created_at')
+    supabase.from('reviews_employee').select('id, rating_overall')
       .eq('company_id', companyId).eq('is_published', true),
   ])
 
@@ -33,7 +45,6 @@ export default async function BusinessDashboard() {
     <div className="bg-gray-50 min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
 
-        {/* Шапка */}
         <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{companyName}</h1>
@@ -49,7 +60,7 @@ export default async function BusinessDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { icon: Briefcase, label: 'Активных вакансий', value: jobs.filter(j => j.is_active).length, color: 'text-blue-600 bg-blue-50' },
-            { icon: Eye, label: 'Просмотров вакансий', value: jobs.reduce((a, j) => a + (j.views_count || 0), 0), color: 'text-purple-600 bg-purple-50' },
+            { icon: Eye, label: 'Просмотров', value: jobs.reduce((a, j) => a + (j.views_count || 0), 0), color: 'text-purple-600 bg-purple-50' },
             { icon: Star, label: 'Рейтинг', value: avgRating ? `${avgRating} ★` : '—', color: 'text-amber-600 bg-amber-50' },
             { icon: DollarSign, label: 'Отзывов', value: reviews.length, color: 'text-emerald-600 bg-emerald-50' },
           ].map(stat => (
@@ -69,7 +80,6 @@ export default async function BusinessDashboard() {
             <h2 className="font-semibold text-gray-900">Мои вакансии</h2>
             <Link href="/jobs/add" className="text-sm text-blue-600 hover:text-blue-800">+ Добавить</Link>
           </div>
-
           {jobs.length === 0 ? (
             <div className="px-5 py-10 text-center text-gray-400 text-sm">
               Вакансий пока нет.{' '}
@@ -84,11 +94,9 @@ export default async function BusinessDashboard() {
                       className="text-sm font-medium text-gray-900 hover:text-blue-600 truncate block">
                       {job.title}
                     </Link>
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      {job.views_count || 0} просмотров
-                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">{job.views_count || 0} просмотров</div>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
                     job.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
                   }`}>
                     {job.is_active ? 'Активна' : 'Закрыта'}
@@ -99,17 +107,19 @@ export default async function BusinessDashboard() {
           )}
         </div>
 
-        {/* Ссылки */}
+        {/* Быстрые ссылки */}
         <div className="grid sm:grid-cols-2 gap-4">
-          <Link href={`/company/${meta.company_bin}`}
-            className="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors">
-            <div className="font-medium text-gray-900 text-sm mb-1">Страница компании</div>
-            <div className="text-xs text-gray-500">Смотрите как видят вас кандидаты →</div>
-          </Link>
+          {companyBin && (
+            <Link href={`/company/${companyBin}`}
+              className="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+              <div className="font-medium text-gray-900 text-sm mb-1">Страница компании</div>
+              <div className="text-xs text-gray-500">Как видят вас кандидаты →</div>
+            </Link>
+          )}
           <Link href="/jobs"
             className="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors">
             <div className="font-medium text-gray-900 text-sm mb-1">Все вакансии</div>
-            <div className="text-xs text-gray-500">Смотрите конкурентов →</div>
+            <div className="text-xs text-gray-500">Смотреть конкурентов →</div>
           </Link>
         </div>
 
