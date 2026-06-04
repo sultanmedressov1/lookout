@@ -29,7 +29,7 @@ export default function ApplySection({ jobId, companyId, jobTitle }: Props) {
       if (error) { alert(`Ошибка: ${error.message}`); return }
 
       // Увеличиваем счётчик откликов
-      await supabase.rpc('increment_job_applications', { job_id: jobId }).catch(() => {})
+      try { await supabase.rpc('increment_job_applications', { job_id: jobId }) } catch {}
 
       setSubmitted(true)
     } catch (err) { alert('Что-то пошло не так.') }
