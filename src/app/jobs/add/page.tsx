@@ -2,10 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  CheckCircle2, Loader2, ChevronRight, ChevronLeft,
-  Briefcase, Building2, Lock
-} from 'lucide-react'
+import { CheckCircle2, Loader2, ChevronRight, ChevronLeft, Briefcase, Building2, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -15,6 +12,7 @@ const CITIES = ['Алматы','Астана','Шымкент','Актобе','�
 function JobAddContent() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
@@ -30,26 +28,48 @@ function JobAddContent() {
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => {
+    const init = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      setLoading(false)
-      // Подставляем email и имя из профиля
-      if (user?.user_metadata?.contact_name) {
+
+      if (user?.user_metadata?.type === 'business') {
+        const bin = user.user_metadata?.company_bin
+        if (bin) {
+          // Ищем компанию по БИН
+          const { data: company } = await supabase
+            .from('companies').select('id').eq('bin', bin).single()
+
+          if (company?.id) {
+            setCompanyId(company.id)
+          } else {
+            // Компании нет — создаём минимальную запись
+            const name = user.user_metadata?.company_name || `Компания ${bin}`
+            const slug = name.toLowerCase().replace(/[^a-zа-я0-9]/gi, '-').slice(0, 40) + '-' + bin.slice(-6)
+            const { data: newCo } = await supabase
+              .from('companies')
+              .insert({ bin, name_ru: name, status: 'active', slug })
+              .select('id').single()
+            if (newCo?.id) setCompanyId(newCo.id)
+          }
+        }
+
         setForm(p => ({
           ...p,
-          contact_name: user.user_metadata.contact_name,
+          contact_name: user.user_metadata?.contact_name || '',
           contact_email: user.email || '',
         }))
       }
-    })
+      setLoading(false)
+    }
+    init()
   }, [])
 
   const handleSubmit = async () => {
+    if (!companyId) { alert('Не удалось определить компанию. Обратитесь в поддержку.'); return }
     setSubmitting(true)
     try {
       const supabase = createClient()
-      const companyId = user?.user_metadata?.company_id
-
       const { data, error } = await supabase.from('jobs').insert([{
         company_id: companyId,
         title: form.title,
@@ -72,14 +92,12 @@ function JobAddContent() {
       if (error) { alert(`Ошибка: ${error.message}`); return }
       setJobId(data.id)
       setSubmitted(true)
-    } catch (err) {
-      alert('Что-то пошло не так.')
-    } finally { setSubmitting(false) }
+    } catch (err) { alert('Что-то пошло не так.') }
+    finally { setSubmitting(false) }
   }
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
 
-  // Не авторизован или не бизнес
   if (!user || user.user_metadata?.type !== 'business') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -88,18 +106,10 @@ function JobAddContent() {
             <Lock className="w-7 h-7 text-amber-500" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Только для бизнеса</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            Для размещения вакансий нужен бизнес-аккаунт. Зарегистрируйтесь бесплатно за 2 минуты.
-          </p>
+          <p className="text-gray-500 text-sm mb-6">Для размещения вакансий нужен бизнес-аккаунт.</p>
           <div className="flex gap-3 justify-center">
-            <Link href="/auth/business"
-              className="px-5 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-              Регистрация бизнеса
-            </Link>
-            <Link href="/auth/signin"
-              className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
-              Войти
-            </Link>
+            <Link href="/auth/business" className="px-5 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Регистрация бизнеса</Link>
+            <Link href="/auth/signin" className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Войти</Link>
           </div>
         </div>
       </div>
@@ -116,8 +126,8 @@ function JobAddContent() {
           <h2 className="text-xl font-bold text-gray-900 mb-2">Вакансия опубликована!</h2>
           <p className="text-gray-500 text-sm mb-6">Соискатели уже могут её найти на Lookout.</p>
           <div className="flex gap-3 justify-center flex-wrap">
-            <Link href={`/jobs/${jobId}`} className="px-5 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Посмотреть вакансию</Link>
-            <Link href="/business/dashboard" className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Панель управления</Link>
+            <Link href={`/jobs/${jobId}`} className="px-5 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Посмотреть</Link>
+            <Link href="/business/dashboard" className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Панель</Link>
           </div>
         </div>
       </div>
@@ -125,18 +135,16 @@ function JobAddContent() {
   }
 
   const companyName = user.user_metadata?.company_name
-
-  const steps = [{ n:1, l:'Вакансия' },{ n:2, l:'Условия' },{ n:3, l:'Контакт' }]
+  const steps = [{n:1,l:'Вакансия'},{n:2,l:'Условия'},{n:3,l:'Контакт'}]
 
   return (
     <div className="bg-gray-50 min-h-screen py-8 px-4">
       <div className="max-w-xl mx-auto">
-
         <div className="text-center mb-8">
           <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
             <Briefcase className="w-6 h-6 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Новая вакансия</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Новая вакансия</h1>
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium px-3 py-1.5 rounded-full">
             <Building2 className="w-3.5 h-3.5" /> {companyName}
           </div>
@@ -157,11 +165,10 @@ function JobAddContent() {
           ))}
         </div>
 
-        {/* Шаг 1: Описание */}
         {step === 1 && (
           <Card title="О вакансии">
             <div className="space-y-4 mb-6">
-              <Field label="Название *"><input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Frontend Developer, HR Manager..." className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" /></Field>
+              <Field label="Название *"><input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Frontend Developer..." className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" /></Field>
               <Field label="Категория">
                 <select value={form.category} onChange={e => set('category', e.target.value)} className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 bg-white">
                   <option value="">Выберите...</option>
@@ -169,14 +176,13 @@ function JobAddContent() {
                 </select>
               </Field>
               <Field label="Описание *"><textarea value={form.description} onChange={e => set('description', e.target.value)} rows={5} placeholder="Чем будет заниматься сотрудник..." className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" /></Field>
-              <Field label="Требования"><textarea value={form.requirements} onChange={e => set('requirements', e.target.value)} rows={3} placeholder="Опыт, навыки, образование..." className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" /></Field>
+              <Field label="Требования"><textarea value={form.requirements} onChange={e => set('requirements', e.target.value)} rows={3} placeholder="Опыт, навыки..." className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" /></Field>
               <Field label="Будет плюсом"><textarea value={form.nice_to_have} onChange={e => set('nice_to_have', e.target.value)} rows={2} placeholder="Дополнительные преимущества..." className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none" /></Field>
             </div>
             <Nav onNext={() => setStep(2)} nextDisabled={!form.title.trim() || !form.description.trim()} nextLabel="Далее" />
           </Card>
         )}
 
-        {/* Шаг 2: Условия */}
         {step === 2 && (
           <Card title="Условия работы">
             <div className="space-y-4 mb-6">
@@ -208,7 +214,7 @@ function JobAddContent() {
                 </div>
                 <label className="flex items-center gap-2 mt-2 cursor-pointer">
                   <input type="checkbox" checked={form.salary_visible} onChange={e => set('salary_visible', e.target.checked)} className="rounded" />
-                  <span className="text-xs text-gray-500">Показывать зарплату в объявлении</span>
+                  <span className="text-xs text-gray-500">Показывать зарплату</span>
                 </label>
               </Field>
               <Field label="Город">
@@ -226,19 +232,12 @@ function JobAddContent() {
           </Card>
         )}
 
-        {/* Шаг 3: Контакт */}
         {step === 3 && (
           <Card title="Контакт для откликов">
             <div className="space-y-4 mb-6">
-              <Field label="Email для откликов *">
-                <input type="email" value={form.contact_email} onChange={e => set('contact_email', e.target.value)} placeholder="hr@company.kz" className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" />
-              </Field>
-              <Field label="Имя контактного лица">
-                <input value={form.contact_name} onChange={e => set('contact_name', e.target.value)} placeholder="Айгерим, HR Manager" className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" />
-              </Field>
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 leading-relaxed">
-                Вакансия будет активна 30 дней и появится рядом с отзывами о вашей компании.
-              </div>
+              <Field label="Email *"><input type="email" value={form.contact_email} onChange={e => set('contact_email', e.target.value)} placeholder="hr@company.kz" className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" /></Field>
+              <Field label="Имя контактного лица"><input value={form.contact_name} onChange={e => set('contact_name', e.target.value)} placeholder="Айгерим, HR Manager" className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" /></Field>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">Вакансия будет активна 30 дней рядом с отзывами о вашей компании.</div>
             </div>
             <Nav onBack={() => setStep(2)} onNext={handleSubmit} nextDisabled={!form.contact_email.trim() || submitting} nextLabel={submitting ? 'Публикуем...' : 'Опубликовать'} isLoading={submitting} />
           </Card>
