@@ -2,10 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, Building2, Loader2 } from 'lucide-react'
+import { Search, X, Building2, Loader2, Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getRiskColor, getRiskLabel } from '@/lib/utils'
-import type { SearchResult } from '@/types'
 
 interface SearchBarProps {
   size?: 'default' | 'lg'
@@ -16,7 +14,7 @@ interface SearchBarProps {
 export function SearchBar({ size = 'default', defaultValue = '', theme = 'light' }: SearchBarProps) {
   const router = useRouter()
   const [query, setQuery] = useState(defaultValue)
-  const [results, setResults] = useState<SearchResult[]>([])
+  const [results, setResults] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const debounceRef = useRef<NodeJS.Timeout>()
@@ -24,9 +22,7 @@ export function SearchBar({ size = 'default', defaultValue = '', theme = 'light'
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -37,18 +33,27 @@ export function SearchBar({ size = 'default', defaultValue = '', theme = 'light'
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data } = await supabase.rpc('search_companies', { p_query: q.trim(), p_limit: 6, p_offset: 0 })
+      const { data } = await supabase
+        .from('companies')
+        .select('id, name_ru, name_kz, city, industry_name, avg_rating, reviews_count, slug, status')
+        .ilike('name_ru', `%${q.trim()}%`)
+        .eq('status', 'active')
+        .limit(6)
       setResults(data || [])
       setIsOpen(true)
-    } finally {
-      setIsLoading(false)
-    }
+    } finally { setIsLoading(false) }
   }, [])
 
   const handleInput = (value: string) => {
     setQuery(value)
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => search(value), 300)
+  }
+
+  const navigate = (company: any) => {
+    router.push(`/company/${company.slug}`)
+    setIsOpen(false)
+    setQuery(company.name_ru)
   }
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -58,9 +63,8 @@ export function SearchBar({ size = 'default', defaultValue = '', theme = 'light'
 
   const isLg = size === 'lg'
   const isDark = theme === 'dark'
-
   const inputBg = isDark
-    ? 'bg-white/10 border-white/20 text-white placeholder-white/50 focus-within:bg-white/15 focus-within:border-white/40'
+    ? 'bg-white/10 border-white/20 text-white placeholder-white/50 focus-within:bg-white/15'
     : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus-within:border-blue-500 focus-within:shadow-sm'
 
   return (
@@ -72,11 +76,10 @@ export function SearchBar({ size = 'default', defaultValue = '', theme = 'light'
             : <Search className={`absolute left-4 ${isDark ? 'text-white/60' : 'text-gray-400'} ${isLg ? 'w-5 h-5' : 'w-4 h-4'}`} />
           }
           <input
-            type="text"
-            value={query}
-            onChange={(e) => handleInput(e.target.value)}
+            type="text" value={query}
+            onChange={e => handleInput(e.target.value)}
             onFocus={() => results.length > 0 && setIsOpen(true)}
-            placeholder="Название компании или БИН..."
+            placeholder="Название компании..."
             className={`w-full bg-transparent outline-none pr-24 ${isLg ? 'pl-12 text-base' : 'pl-10 text-sm'} ${isDark ? 'text-white placeholder-white/50' : 'text-gray-900 placeholder-gray-400'}`}
           />
           {query && (
@@ -92,24 +95,26 @@ export function SearchBar({ size = 'default', defaultValue = '', theme = 'light'
         </div>
       </form>
 
-      {/* Дропдаун */}
       {isOpen && results.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-          {results.map((r) => (
-            <button key={r.id} onClick={() => { router.push(`/company/${r.bin}`); setIsOpen(false) }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-none">
+          {results.map(r => (
+            <button key={r.id} onClick={() => navigate(r)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-none text-left">
               <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                 <Building2 className="w-4 h-4 text-gray-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-900 text-sm truncate">{r.name_ru}</div>
-                <div className="text-xs text-gray-400 truncate">{r.bin} · {r.city || 'Казахстан'} · {r.legal_form}</div>
+                <div className="text-xs text-gray-400 truncate">
+                  {r.city}{r.industry_name ? ` · ${r.industry_name}` : ''}
+                </div>
               </div>
-              <div className={`text-xs font-bold flex-shrink-0 px-2 py-0.5 rounded-full border ${
-                r.risk_score >= 70 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
-                r.risk_score >= 40 ? 'text-amber-700 bg-amber-50 border-amber-200' :
-                'text-red-700 bg-red-50 border-red-200'
-              }`}>{r.risk_score}</div>
+              {r.avg_rating && r.reviews_count > 0 && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <span className="text-sm font-medium text-gray-700">{Number(r.avg_rating).toFixed(1)}</span>
+                </div>
+              )}
             </button>
           ))}
           <button onClick={() => handleSubmit()}
@@ -121,7 +126,10 @@ export function SearchBar({ size = 'default', defaultValue = '', theme = 'light'
 
       {isOpen && !isLoading && query.length >= 2 && results.length === 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-4 text-center text-sm text-gray-500">
-          Компания не найдена. Проверьте написание или введите БИН.
+          Компания не найдена.{' '}
+          <button onClick={() => { router.push(`/search?q=${encodeURIComponent(query)}`); setIsOpen(false) }} className="text-blue-600 hover:underline">
+            Искать дальше →
+          </button>
         </div>
       )}
     </div>
