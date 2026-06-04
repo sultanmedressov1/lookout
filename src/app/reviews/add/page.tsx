@@ -26,26 +26,6 @@ const RATINGS = [
 function AddReviewContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-
-  // Блокируем бизнес-аккаунты
-  const [isBusiness, setIsBusiness] = useState(false)
-  useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => {
-      if (user?.user_metadata?.type === 'business') setIsBusiness(true)
-    })
-  }, [])
-
-  if (isBusiness) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl border border-gray-200 p-10 max-w-md text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Недоступно для бизнеса</h2>
-          <p className="text-gray-500 text-sm mb-6">Бизнес-аккаунты не могут оставлять отзывы о работодателях.</p>
-          <a href="/business/dashboard" className="text-sm font-medium text-blue-600 hover:text-blue-800">Перейти в панель →</a>
-        </div>
-      </div>
-    )
-  }
   const [step, setStep] = useState<Step>(1)
   const [submitted, setSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)

@@ -34,29 +34,44 @@ function JobAddContent() {
       setUser(user)
 
       if (user?.user_metadata?.type === 'business') {
-        const bin = user.user_metadata?.company_bin
-        if (bin) {
-          // Ищем компанию по БИН
-          const { data: company } = await supabase
-            .from('companies').select('id').eq('bin', bin).single()
+        const meta = user.user_metadata
 
-          if (company?.id) {
-            setCompanyId(company.id)
-          } else {
-            // Компании нет — создаём минимальную запись
-            const name = user.user_metadata?.company_name || `Компания ${bin}`
-            const slug = name.toLowerCase().replace(/[^a-zа-я0-9]/gi, '-').slice(0, 40) + '-' + bin.slice(-6)
-            const { data: newCo } = await supabase
-              .from('companies')
-              .insert({ bin, name_ru: name, status: 'active', slug })
-              .select('id').single()
-            if (newCo?.id) setCompanyId(newCo.id)
-          }
+        // Стратегия 1: company_id прямо в метаданных
+        let id = meta?.company_id
+
+        // Стратегия 2: ищем по имени компании
+        if (!id && meta?.company_name) {
+          const { data } = await supabase
+            .from('companies')
+            .select('id')
+            .ilike('name_ru', meta.company_name.trim())
+            .limit(1)
+            .single()
+          id = data?.id
         }
 
+        // Стратегия 3: создаём компанию автоматически
+        if (!id && meta?.company_name) {
+          const name = meta.company_name.trim()
+          const slug = name.toLowerCase()
+            .split('').map((c: string) => {
+              const m: Record<string,string> = {'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ж':'zh','з':'z','и':'i','й':'j','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','ы':'y','э':'e','ю':'yu','я':'ya'}
+              return m[c] ?? c
+            }).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
+            + '-' + Math.random().toString(36).slice(2, 6)
+
+          const { data: newCo } = await supabase
+            .from('companies')
+            .insert({ name_ru: name, slug, status: 'active' })
+            .select('id')
+            .single()
+          id = newCo?.id
+        }
+
+        setCompanyId(id || null)
         setForm(p => ({
           ...p,
-          contact_name: user.user_metadata?.contact_name || '',
+          contact_name: meta?.contact_name || '',
           contact_email: user.email || '',
         }))
       }

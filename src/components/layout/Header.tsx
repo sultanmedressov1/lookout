@@ -52,7 +52,9 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-1 ml-auto">
             <Link href="/jobs" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">Вакансии</Link>
             <Link href="/salaries" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">Зарплаты</Link>
-            <Link href="/reviews/add" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">Отзыв</Link>
+            {!isBusiness && (
+              <Link href="/reviews/add" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">Отзыв</Link>
+            )}
           </nav>
 
           {/* Авторизация */}
