@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Trash2, ExternalLink } from 'lucide-react'
+import { Trash2, ExternalLink, RotateCcw } from 'lucide-react'
 
 export default function DashboardClient({ jobs: initialJobs, applications, companySlug }: {
   jobs: any[]; applications: any[]; companySlug: string
@@ -11,16 +11,23 @@ export default function DashboardClient({ jobs: initialJobs, applications, compa
   const [closing, setClosing] = useState<string | null>(null)
 
   const closeJob = async (jobId: string) => {
-    if (!confirm('Закрыть вакансию? Она перестанет отображаться для соискателей.')) return
+    if (!confirm('Закрыть вакансию?')) return
     setClosing(jobId)
     const res = await fetch('/api/jobs/close', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ job_id: jobId }),
     })
-    if (res.ok) {
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, is_active: false } : j))
-    }
+    if (res.ok) setJobs(p => p.map(j => j.id === jobId ? { ...j, is_active: false } : j))
+    setClosing(null)
+  }
+
+  const restoreJob = async (jobId: string) => {
+    setClosing(jobId)
+    const res = await fetch('/api/jobs/restore', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: jobId }),
+    })
+    if (res.ok) setJobs(p => p.map(j => j.id === jobId ? { ...j, is_active: true } : j))
     setClosing(null)
   }
 
@@ -63,6 +70,13 @@ export default function DashboardClient({ jobs: initialJobs, applications, compa
                     className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                     title="Закрыть вакансию">
                     <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {!job.is_active && (
+                  <button onClick={() => restoreJob(job.id)} disabled={closing === job.id}
+                    className="p-1.5 text-gray-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors flex-shrink-0"
+                    title="Восстановить вакансию">
+                    <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
