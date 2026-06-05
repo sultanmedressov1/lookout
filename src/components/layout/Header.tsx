@@ -92,6 +92,11 @@ export function Header() {
                     {user.user_metadata?.name || 'Профиль'}
                   </Link>
                 )}
+                {!isBusiness && (
+                  <Link href="/jobs/saved" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
+                    Сохранённые
+                  </Link>
+                )}
                 {isAdmin && (
                   <Link href="/admin" className="px-3 py-2 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg">Admin</Link>
                 )}

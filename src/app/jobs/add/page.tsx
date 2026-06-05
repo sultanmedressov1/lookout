@@ -22,7 +22,7 @@ function JobAddContent() {
   const [form, setForm] = useState({
     title: '', description: '', requirements: '', nice_to_have: '',
     category: '', employment_type: 'full-time', experience_level: 'any',
-    salary_from: '', salary_to: '', salary_visible: true,
+    salary_from: '', salary_to: '', salary_visible: true, salary_currency: 'KZT',
     city: '', is_remote: false, contact_email: '', contact_name: '',
   })
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
@@ -69,6 +69,7 @@ function JobAddContent() {
         salary_from: form.salary_from ? parseInt(form.salary_from.replace(/\D/g,'')) : null,
         salary_to: form.salary_to ? parseInt(form.salary_to.replace(/\D/g,'')) : null,
         salary_visible: form.salary_visible,
+        salary_currency: form.salary_currency,
         city: form.city || null,
         is_remote: form.is_remote,
         contact_email: form.contact_email || null,
@@ -194,12 +195,18 @@ function JobAddContent() {
                   </select>
                 </Field>
               </div>
-              <Field label="Зарплата (₸/мес)">
-                <div className="grid grid-cols-2 gap-2">
-                  <input value={form.salary_from} onChange={e => set('salary_from', e.target.value)} placeholder="от 300 000" className="text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
-                  <input value={form.salary_to} onChange={e => set('salary_to', e.target.value)} placeholder="до 600 000" className="text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
+              <Field label="Зарплата">
+                <div className="flex gap-2 mb-2">
+                  <select value={form.salary_currency} onChange={e => set('salary_currency', e.target.value)}
+                    className="text-sm border border-gray-200 rounded-xl px-3 py-3 bg-white focus:outline-none focus:border-blue-400 w-24">
+                    <option value="KZT">₸ KZT</option>
+                    <option value="USD">$ USD</option>
+                    <option value="EUR">€ EUR</option>
+                  </select>
+                  <input value={form.salary_from} onChange={e => set('salary_from', e.target.value)} placeholder="от" className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
+                  <input value={form.salary_to} onChange={e => set('salary_to', e.target.value)} placeholder="до" className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
                 </div>
-                <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.salary_visible} onChange={e => set('salary_visible', e.target.checked)} className="rounded" />
                   <span className="text-xs text-gray-500">Показывать зарплату</span>
                 </label>

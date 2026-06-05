@@ -18,13 +18,14 @@ interface Props {
   taxRecords: TaxRecord[]
   empReviews: EmployeeReview[]
   cptyReviews: CounterpartyReview[]
+  responsesByReview?: Record<string, any>
 }
 
 type Tab = 'overview' | 'reviews' | 'interviews' | 'salaries' | 'jobs' | 'courts'
 
 const RATING_LABELS = ['','Очень плохо','Плохо','Нормально','Хорошо','Отлично']
 
-export function CompanyPageClient({ company, courtCases, taxRecords, empReviews, cptyReviews }: Props) {
+export function CompanyPageClient({ company, courtCases, taxRecords, empReviews, cptyReviews, responsesByReview = {} }: Props) {
   const [tab, setTab] = useState<Tab>('reviews')
 
   const avg = company.avg_rating
@@ -171,7 +172,7 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
         <div className="grid lg:grid-cols-3 gap-6">
 
           <div className="lg:col-span-2">
-            {tab === 'reviews' && <ReviewsTab reviews={empReviews} companyId={company.id} />}
+            {tab === 'reviews' && <ReviewsTab reviews={empReviews} companyId={company.id} companyName={company.name_ru} responsesByReview={responsesByReview} />}
             {tab === 'interviews' && <InterviewsTab companyId={company.id} />}
             {tab === 'salaries' && <SalariesTab companyId={company.id} salaries={[]} />}
             {tab === 'jobs' && <JobsTab companyId={company.id} companyName={company.name_ru} />}
@@ -212,7 +213,7 @@ function Metric({ pct, label, positive }: { pct: number; label: string; positive
 }
 
 // ─── Вкладка Отзывы ──────────────────────────────────────
-function ReviewsTab({ reviews, companyId }: { reviews: any[]; companyId: string }) {
+function ReviewsTab({ reviews, companyId, companyName, responsesByReview }: { reviews: any[]; companyId: string; companyName: string; responsesByReview: Record<string, any> }) {
   const avg = reviews.length ? reviews.reduce((a, r) => a + r.rating_overall, 0) / reviews.length : 0
 
   const subRatings = [
@@ -302,7 +303,7 @@ function ReviewsTab({ reviews, companyId }: { reviews: any[]; companyId: string 
         </div>
       ) : (
         <div className="space-y-4">
-          {reviews.map((r: any) => <ReviewCard key={r.id} review={r} />)}
+          {reviews.map((r: any) => <ReviewCard key={r.id} review={r} companyId={companyId} companyName={companyName} existingResponse={responsesByReview[r.id]} />)}
         </div>
       )}
     </div>
@@ -310,8 +311,37 @@ function ReviewsTab({ reviews, companyId }: { reviews: any[]; companyId: string 
 }
 
 // ─── Карточка отзыва — Glassdoor стиль ────────────────────
-function ReviewCard({ review }: { review: any }) {
+function ReviewCard({ review, companyId, companyName, existingResponse }: { review: any; companyId: string; companyName: string; existingResponse?: any }) {
   const [expanded, setExpanded] = useState(false)
+  const [showResponseForm, setShowResponseForm] = useState(false)
+  const [responseText, setResponseText] = useState(existingResponse?.content || '')
+  const [response, setResponse] = useState(existingResponse)
+  const [saving, setSaving] = useState(false)
+  const [isBusiness, setIsBusiness] = useState(false)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      if (user?.user_metadata?.type === 'business' && user?.user_metadata?.company_id === companyId) {
+        setIsBusiness(true)
+      }
+    })
+  }, [companyId])
+
+  const submitResponse = async () => {
+    if (!responseText.trim()) return
+    setSaving(true)
+    const res = await fetch('/api/reviews/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ review_id: review.id, company_id: companyId, content: responseText }),
+    })
+    const data = await res.json()
+    if (data.response) {
+      setResponse(data.response)
+      setShowResponseForm(false)
+    }
+    setSaving(false)
+  }
 
   const subRatings = [
     { key: 'rating_worklife', label: 'Баланс' },
@@ -346,22 +376,18 @@ function ReviewCard({ review }: { review: any }) {
         {review.employment_year_start && <span>{review.employment_year_start}{review.employment_year_end ? `–${review.employment_year_end}` : '–н.в.'}</span>}
       </div>
 
-      {/* Плюсы и минусы — главный контент */}
+      {/* Плюсы и минусы */}
       <div className="space-y-3 mb-4">
         {review.pros && (
           <div>
             <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-1">Плюсы</div>
-            <p className={`text-sm text-gray-700 leading-relaxed ${!expanded && review.pros.length > 200 ? 'line-clamp-3' : ''}`}>
-              {review.pros}
-            </p>
+            <p className={`text-sm text-gray-700 leading-relaxed ${!expanded && review.pros.length > 200 ? 'line-clamp-3' : ''}`}>{review.pros}</p>
           </div>
         )}
         {review.cons && (
           <div>
             <div className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-1">Минусы</div>
-            <p className={`text-sm text-gray-700 leading-relaxed ${!expanded && review.cons.length > 200 ? 'line-clamp-3' : ''}`}>
-              {review.cons}
-            </p>
+            <p className={`text-sm text-gray-700 leading-relaxed ${!expanded && review.cons.length > 200 ? 'line-clamp-3' : ''}`}>{review.cons}</p>
           </div>
         )}
         {review.advice_to_management && (
@@ -397,30 +423,66 @@ function ReviewCard({ review }: { review: any }) {
           </div>
         )}
         {review.ceo_approval && (
-          <div className={`flex items-center gap-1.5 text-xs ${
-            review.ceo_approval === 'positive' ? 'text-emerald-600' :
-            review.ceo_approval === 'negative' ? 'text-red-500' : 'text-gray-400'
-          }`}>
-            {review.ceo_approval === 'positive' ? <ThumbsUp className="w-3.5 h-3.5" /> :
-             review.ceo_approval === 'negative' ? <ThumbsDown className="w-3.5 h-3.5" /> :
-             <Minus className="w-3.5 h-3.5" />}
-            {review.ceo_approval === 'positive' ? 'Одобряет руководство' :
-             review.ceo_approval === 'negative' ? 'Не одобряет' : 'Нейтрально о руководстве'}
+          <div className={`flex items-center gap-1.5 text-xs ${review.ceo_approval === 'positive' ? 'text-emerald-600' : review.ceo_approval === 'negative' ? 'text-red-500' : 'text-gray-400'}`}>
+            {review.ceo_approval === 'positive' ? <ThumbsUp className="w-3.5 h-3.5" /> : review.ceo_approval === 'negative' ? <ThumbsDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+            {review.ceo_approval === 'positive' ? 'Одобряет руководство' : review.ceo_approval === 'negative' ? 'Не одобряет' : 'Нейтрально'}
           </div>
         )}
         {review.business_outlook && (
-          <div className={`flex items-center gap-1.5 text-xs ${
-            review.business_outlook === 'positive' ? 'text-emerald-600' :
-            review.business_outlook === 'negative' ? 'text-red-500' : 'text-gray-400'
-          }`}>
-            {review.business_outlook === 'positive' ? <TrendingUp className="w-3.5 h-3.5" /> :
-             review.business_outlook === 'negative' ? <TrendingDown className="w-3.5 h-3.5" /> :
-             <Minus className="w-3.5 h-3.5" />}
-            {review.business_outlook === 'positive' ? 'Компания растёт' :
-             review.business_outlook === 'negative' ? 'Снижается' : 'Стабильно'}
+          <div className={`flex items-center gap-1.5 text-xs ${review.business_outlook === 'positive' ? 'text-emerald-600' : review.business_outlook === 'negative' ? 'text-red-500' : 'text-gray-400'}`}>
+            {review.business_outlook === 'positive' ? <TrendingUp className="w-3.5 h-3.5" /> : review.business_outlook === 'negative' ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+            {review.business_outlook === 'positive' ? 'Компания растёт' : review.business_outlook === 'negative' ? 'Снижается' : 'Стабильно'}
           </div>
         )}
+        {/* Кнопка ответить для работодателя */}
+        {isBusiness && !response && !showResponseForm && (
+          <button onClick={() => setShowResponseForm(true)}
+            className="ml-auto text-xs text-blue-600 hover:text-blue-800 font-medium">
+            Ответить
+          </button>
+        )}
       </div>
+
+      {/* Форма ответа */}
+      {isBusiness && showResponseForm && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ответ от {companyName}</div>
+          <textarea value={responseText} onChange={e => setResponseText(e.target.value)}
+            rows={3} placeholder="Напишите официальный ответ на отзыв..."
+            className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 resize-none mb-2" />
+          <div className="flex gap-2">
+            <button onClick={submitResponse} disabled={saving || !responseText.trim()}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50">
+              {saving ? 'Сохраняем...' : 'Опубликовать ответ'}
+            </button>
+            <button onClick={() => setShowResponseForm(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ответ работодателя — Glassdoor стиль */}
+      {response && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <Users className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div className="text-xs font-semibold text-blue-900">Официальный ответ от {companyName}</div>
+              <div className="text-xs text-blue-400 ml-auto">{timeAgo(response.created_at)}</div>
+            </div>
+            <p className="text-sm text-blue-800 leading-relaxed">{response.content}</p>
+            {isBusiness && (
+              <button onClick={() => { setShowResponseForm(true); setResponseText(response.content) }}
+                className="text-xs text-blue-600 hover:text-blue-800 mt-2">
+                Изменить ответ
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
