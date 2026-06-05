@@ -128,11 +128,8 @@ export async function GET(
 }
 
 // ─── Вспомогательная функция ─────────────────────────────
-export function generateSlug(name?: string, bin?: string): string {
-  if (!name) name = 'company'
-  if (!bin) bin = '000000'
-
-  const safeName = name.toLowerCase()
+function generateSlug(name?: string, bin?: string): string {
+  const safeName = (name ?? '').toLowerCase()
 
   const slug = safeName
     .replace(/[а-яё]/g, (char) => {
@@ -142,10 +139,11 @@ export function generateSlug(name?: string, bin?: string): string {
         с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',
         щ:'sch',ы:'y',э:'e',ю:'yu',я:'ya',
       }
-      return map[char] ?? char
+      return map[char] || char
     })
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 
-  return `${slug || 'company'}-${bin.slice(-6)}`
+  const safeBin = bin ?? ''
+  return `${slug || 'company'}-${safeBin.slice(-6)}`
 }
