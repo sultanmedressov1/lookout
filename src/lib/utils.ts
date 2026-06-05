@@ -72,8 +72,8 @@ export function formatDate(dateStr: string | null): string {
   })
 }
 
-export function formatBin(bin: string): string {
-  // 123456789012 → 123456 789012
+export function formatBin(bin?: string): string {
+  if (!bin) return ''
   return bin.replace(/(\d{6})(\d{6})/, '$1 $2')
 }
 
@@ -88,20 +88,24 @@ export function timeAgo(dateStr: string): string {
 }
 
 // ─── Slug ────────────────────────────────────────────────
-export function generateSlug(name: string, bin: string): string {
-  const slug = name
-    .toLowerCase()
-    .replace(/[аáбвгдеёжзийклмнопрстуфхцчшщъыьэюя]/g, (char) => {
+export function generateSlug(name?: string, bin?: string): string {
+  if (!name) name = 'company'
+  if (!bin) bin = '000000'
+
+  const safeName = name.toLowerCase()
+
+  const slug = safeName
+    .replace(/[а-яё]/g, (char) => {
       const map: Record<string, string> = {
         а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',
         и:'i',й:'j',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',
         с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',
         щ:'sch',ы:'y',э:'e',ю:'yu',я:'ya',
       }
-      return map[char] || char
+      return map[char] ?? char
     })
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 
-  return `${slug}-${bin.slice(-6)}`
+  return `${slug || 'company'}-${bin.slice(-6)}`
 }

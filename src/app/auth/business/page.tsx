@@ -6,11 +6,26 @@ import { useRouter } from 'next/navigation'
 import { Eye, Loader2, AlertCircle, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-function generateSlug(name: string): string {
-  const tmap: Record<string, string> = {
-    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'j','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ы':'y','э':'e','ю':'yu','я':'ya','ъ':'','ь':''
-  }
-  return name.toLowerCase().split('').map(c => tmap[c] ?? c).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) + '-' + Math.random().toString(36).slice(2, 7)
+export function generateSlug(name?: string, bin?: string): string {
+  if (!name) name = 'company'
+  if (!bin) bin = '000000'
+
+  const safeName = name.toLowerCase()
+
+  const slug = safeName
+    .replace(/[а-яё]/g, (char) => {
+      const map: Record<string, string> = {
+        а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',
+        и:'i',й:'j',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',
+        с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',
+        щ:'sch',ы:'y',э:'e',ю:'yu',я:'ya',
+      }
+      return map[char] ?? char
+    })
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
+  return `${slug || 'company'}-${bin.slice(-6)}`
 }
 
 export default function BusinessRegisterPage() {

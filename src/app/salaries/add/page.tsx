@@ -33,7 +33,8 @@ const CITIES = [
 
 const YEARS = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i))
 
-function formatSalary(val: string): string {
+function formatSalary(val?: string): string {
+  if (!val) return ''
   const num = parseInt(val.replace(/\D/g, ''))
   if (!num) return ''
   return num.toLocaleString('ru-RU')

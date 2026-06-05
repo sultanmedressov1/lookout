@@ -128,15 +128,24 @@ export async function GET(
 }
 
 // ─── Вспомогательная функция ─────────────────────────────
-function generateSlug(name: string, bin: string): string {
-  const tmap: Record<string, string> = {
-    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
-    'з':'z','и':'i','й':'j','к':'k','л':'l','м':'m','н':'n','о':'o',
-    'п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts',
-    'ч':'ch','ш':'sh','щ':'sch','ы':'y','э':'e','ю':'yu','я':'ya','ъ':'','ь':'',
-  }
-  const slug = name.toLowerCase()
-    .split('').map(c => tmap[c] || c).join('')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)
-  return `${slug}-${bin.slice(-6)}`
+export function generateSlug(name?: string, bin?: string): string {
+  if (!name) name = 'company'
+  if (!bin) bin = '000000'
+
+  const safeName = name.toLowerCase()
+
+  const slug = safeName
+    .replace(/[а-яё]/g, (char) => {
+      const map: Record<string, string> = {
+        а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',
+        и:'i',й:'j',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',
+        с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',
+        щ:'sch',ы:'y',э:'e',ю:'yu',я:'ya',
+      }
+      return map[char] ?? char
+    })
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
+  return `${slug || 'company'}-${bin.slice(-6)}`
 }
