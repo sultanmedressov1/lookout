@@ -47,7 +47,7 @@ export default async function ApplicationsPage({ params }: Props) {
           </Link>
         </div>
 
-        <ApplicationsList applications={applications || []} jobId={job.id} />
+        <ApplicationsList applications={applications || []} jobId={job.id} jobTitle={job.title} />
       </div>
     </div>
   )

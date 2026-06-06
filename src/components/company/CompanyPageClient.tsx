@@ -21,7 +21,7 @@ interface Props {
   responsesByReview?: Record<string, any>
 }
 
-type Tab = 'overview' | 'reviews' | 'interviews' | 'salaries' | 'jobs' | 'courts'
+type Tab = 'overview' | 'reviews' | 'interviews' | 'salaries' | 'jobs'
 
 const RATING_LABELS = ['','Очень плохо','Плохо','Нормально','Хорошо','Отлично']
 
@@ -44,7 +44,6 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
     { id: 'interviews' as Tab, label: 'Интервью', count: null },
     { id: 'salaries' as Tab, label: 'Зарплаты', count: 0 },
     { id: 'jobs' as Tab, label: 'Вакансии', count: null },
-    { id: 'courts' as Tab, label: 'Суды', count: company.court_cases_count },
     { id: 'overview' as Tab, label: 'Обзор', count: null },
   ]
 
@@ -176,25 +175,12 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
             {tab === 'interviews' && <InterviewsTab companyId={company.id} />}
             {tab === 'salaries' && <SalariesTab companyId={company.id} salaries={[]} />}
             {tab === 'jobs' && <JobsTab companyId={company.id} companyName={company.name_ru} />}
-            {tab === 'courts' && <CourtsTab cases={courtCases} total={company.court_cases_count} />}
             {tab === 'overview' && <OverviewTab company={company} taxRecords={taxRecords} />}
           </div>
 
           {/* Сайдбар */}
           <div className="space-y-4">
             <SidebarInfo company={company} />
-            {!company.is_claimed && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <h4 className="font-semibold text-blue-900 text-sm mb-1">Это ваша компания?</h4>
-                <p className="text-xs text-blue-700 mb-3 leading-relaxed">
-                  Управляйте страницей, отвечайте на отзывы и привлекайте лучших кандидатов.
-                </p>
-                <Link href={`/claim/${company.bin}`}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-900">
-                  Заявить профиль <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -321,7 +307,7 @@ function ReviewCard({ review, companyId, companyName, existingResponse }: { revi
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data: { user } }) => {
-      if (user?.user_metadata?.type === 'business' && user?.user_metadata?.company_id === companyId) {
+      if (user?.user_metadata?.type === 'business') {
         setIsBusiness(true)
       }
     })

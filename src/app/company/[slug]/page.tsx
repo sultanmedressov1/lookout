@@ -37,8 +37,8 @@ export default async function CompanyPage({ params }: PageProps) {
   const [courtRes, taxRes, empRes, cptyRes, responsesRes] = await Promise.all([
     supabase.from('court_cases').select('*').eq('company_id', company.id).order('case_date', { ascending: false }).limit(50),
     supabase.from('tax_records').select('*').eq('company_id', company.id),
-    supabase.from('reviews_employee').select('*').eq('company_id', company.id).eq('is_published', true).order('created_at', { ascending: false }),
-    supabase.from('reviews_counterparty').select('*').eq('company_id', company.id).eq('is_published', true).order('created_at', { ascending: false }),
+    supabase.from('reviews_employee').select('*').eq('company_id', company.id).order('created_at', { ascending: false }),
+    supabase.from('reviews_counterparty').select('*').eq('company_id', company.id).order('created_at', { ascending: false }),
     supabase.from('review_responses').select('*').eq('company_id', company.id),
   ])
 

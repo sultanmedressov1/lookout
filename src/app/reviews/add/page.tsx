@@ -70,6 +70,21 @@ function AddReviewContent() {
         is_published: true,
         verification_status: 'unverified',
       }])
+      // Уведомляем работодателя (#10)
+      try {
+        const { data: profile } = await supabase.from('company_profiles').select('user_id').eq('company_id', company?.id).maybeSingle()
+        if (profile?.user_id) {
+          await fetch('/api/notifications', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: profile.user_id, type: 'new_review',
+              title: 'Новый отзыв о вашей компании',
+              message: `Кто-то оставил отзыв: «${form.title}»`,
+              link: `/business/dashboard`,
+            }),
+          }).catch(() => {})
+        }
+      } catch {}
       setSubmitted(true)
     } catch (err) { console.error(err) }
     finally { setIsSubmitting(false) }

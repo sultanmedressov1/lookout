@@ -22,7 +22,7 @@ function JobAddContent() {
   const [form, setForm] = useState({
     title: '', description: '', requirements: '', nice_to_have: '',
     category: '', employment_type: 'full-time', experience_level: 'any',
-    salary_from: '', salary_to: '', salary_visible: true, salary_currency: 'KZT',
+    salary_from: '', salary_to: '', salary_visible: true, salary_currency: 'KZT', salary_type: 'gross',
     city: '', is_remote: false, contact_email: '', contact_name: '',
   })
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
@@ -70,6 +70,7 @@ function JobAddContent() {
         salary_to: form.salary_to ? parseInt(form.salary_to.replace(/\D/g,'')) : null,
         salary_visible: form.salary_visible,
         salary_currency: form.salary_currency,
+        salary_type: form.salary_type,
         city: form.city || null,
         is_remote: form.is_remote,
         contact_email: form.contact_email || null,
@@ -195,7 +196,7 @@ function JobAddContent() {
                   </select>
                 </Field>
               </div>
-              <Field label="Зарплата">
+              <Field label="Зарплата (вилка обязательна) *">
                 <div className="flex gap-2 mb-2">
                   <select value={form.salary_currency} onChange={e => set('salary_currency', e.target.value)}
                     className="text-sm border border-gray-200 rounded-xl px-3 py-3 bg-white focus:outline-none focus:border-blue-400 w-24">
@@ -203,13 +204,25 @@ function JobAddContent() {
                     <option value="USD">$ USD</option>
                     <option value="EUR">€ EUR</option>
                   </select>
-                  <input value={form.salary_from} onChange={e => set('salary_from', e.target.value)} placeholder="от" className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
-                  <input value={form.salary_to} onChange={e => set('salary_to', e.target.value)} placeholder="до" className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
+                  <input value={form.salary_from} onChange={e => set('salary_from', e.target.value)} placeholder="от (обязательно)" required
+                    className={`flex-1 text-sm border rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400 ${!form.salary_from ? 'border-amber-300' : 'border-gray-200'}`} />
+                  <input value={form.salary_to} onChange={e => set('salary_to', e.target.value)} placeholder="до (обязательно)" required
+                    className={`flex-1 text-sm border rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400 ${!form.salary_to ? 'border-amber-300' : 'border-gray-200'}`} />
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.salary_visible} onChange={e => set('salary_visible', e.target.checked)} className="rounded" />
-                  <span className="text-xs text-gray-500">Показывать зарплату</span>
-                </label>
+                <div className="flex gap-4 items-center flex-wrap">
+                  <div className="flex gap-2">
+                    {[{v:'gross',l:'До налогов'},{v:'net',l:'На руки'}].map(t => (
+                      <button key={t.v} type="button" onClick={() => set('salary_type', t.v)}
+                        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${form.salary_type===t.v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                        {t.l}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer ml-auto">
+                    <input type="checkbox" checked={form.salary_visible} onChange={e => set('salary_visible', e.target.checked)} className="rounded" />
+                    <span className="text-xs text-gray-500">Показывать в объявлении</span>
+                  </label>
+                </div>
               </Field>
               <Field label="Город">
                 <select value={form.city} onChange={e => set('city', e.target.value)} className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 bg-white">

@@ -5,7 +5,7 @@ import { DollarSign, MapPin, TrendingUp, Plus, BarChart2 } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Зарплаты в Казахстане — Lookout' }
 
-interface PageProps { searchParams: { category?: string; city?: string; level?: string; salary_from?: string; salary_to?: string } }
+interface PageProps { searchParams: { category?: string; city?: string; level?: string } }
 
 const CATEGORIES = ['IT и разработка','Менеджмент','Продажи','Маркетинг','Финансы','HR','Операции','Дизайн','Аналитика']
 const CITIES = ['Алматы','Астана','Шымкент','Актобе','Тараз','Павлодар']
@@ -27,8 +27,6 @@ export default async function SalariesPage({ searchParams }: PageProps) {
   if (searchParams.category) query = query.eq('position_category', searchParams.category)
   if (searchParams.city) query = query.eq('city', searchParams.city)
   if (searchParams.level) query = query.eq('experience_level', searchParams.level)
-  if (searchParams.salary_from) query = query.gte('salary_monthly', parseInt(searchParams.salary_from))
-  if (searchParams.salary_to) query = query.lte('salary_monthly', parseInt(searchParams.salary_to))
 
   const { data: salaries } = await query
   const items = salaries || []
@@ -61,7 +59,7 @@ export default async function SalariesPage({ searchParams }: PageProps) {
 
   const levelLabels: Record<string, string> = { intern:'Стажёр', junior:'Junior', middle:'Middle', senior:'Senior', lead:'Lead', manager:'Менеджер', director:'Директор' }
 
-  const hasFilters = searchParams.category || searchParams.city || searchParams.level || searchParams.salary_from || searchParams.salary_to
+  const hasFilters = searchParams.category || searchParams.city || searchParams.level
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -96,18 +94,6 @@ export default async function SalariesPage({ searchParams }: PageProps) {
               <option value="">Все уровни</option>
               {LEVELS.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-            <div className="flex items-center gap-1.5">
-              <div className="relative">
-                <input name="salary_from" type="number" defaultValue={searchParams.salary_from}
-                  placeholder="от ₸" min="0" step="10000"
-                  className="w-28 text-sm border border-gray-200 rounded-lg pl-3 pr-2 py-2 focus:outline-none focus:border-blue-400" />
-              </div>
-              <span className="text-gray-400 text-sm">—</span>
-              <div className="relative">
-                <input name="salary_to" type="number" defaultValue={searchParams.salary_to}
-                  placeholder="до ₸" min="0" step="10000"
-                  className="w-28 text-sm border border-gray-200 rounded-lg pl-3 pr-2 py-2 focus:outline-none focus:border-blue-400" />
-              </div>
             </div>
             <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
               Применить
@@ -144,10 +130,7 @@ export default async function SalariesPage({ searchParams }: PageProps) {
                           )}
                         </div>
                         {company && (
-                          <Link
-                            href={`/company/${company.slug ?? company.id}`}
-                            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                          >
+                          <Link href={`/company/${company.slug}`} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                             {company.name_ru}
                           </Link>
                         )}
