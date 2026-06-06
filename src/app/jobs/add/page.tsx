@@ -22,7 +22,7 @@ function JobAddContent() {
   const [form, setForm] = useState({
     title: '', description: '', requirements: '', nice_to_have: '',
     category: '', employment_type: 'full-time', experience_level: 'any',
-    salary_from: '', salary_to: '', salary_visible: true, salary_currency: 'KZT', salary_type: 'gross',
+    salary_from: '', salary_to: '', salary_exact: '', salary_mode: 'range', salary_currency: 'KZT', salary_type: 'gross',
     city: '', is_remote: false, contact_email: '', contact_name: '',
   })
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
@@ -66,9 +66,13 @@ function JobAddContent() {
         category: form.category || null,
         employment_type: form.employment_type,
         experience_level: form.experience_level,
-        salary_from: form.salary_from ? parseInt(form.salary_from.replace(/\D/g,'')) : null,
-        salary_to: form.salary_to ? parseInt(form.salary_to.replace(/\D/g,'')) : null,
-        salary_visible: form.salary_visible,
+        salary_from: form.salary_mode === 'exact'
+          ? (form.salary_exact ? parseInt(form.salary_exact.replace(/\D/g,'')) : null)
+          : (form.salary_from ? parseInt(form.salary_from.replace(/\D/g,'')) : null),
+        salary_to: form.salary_mode === 'exact'
+          ? (form.salary_exact ? parseInt(form.salary_exact.replace(/\D/g,'')) : null)
+          : (form.salary_to ? parseInt(form.salary_to.replace(/\D/g,'')) : null),
+        salary_visible: !!(form.salary_from || form.salary_to || form.salary_exact),
         salary_currency: form.salary_currency,
         salary_type: form.salary_type,
         city: form.city || null,
@@ -196,33 +200,52 @@ function JobAddContent() {
                   </select>
                 </Field>
               </div>
-              <Field label="Зарплата (вилка обязательна) *">
-                <div className="flex gap-2 mb-2">
-                  <select value={form.salary_currency} onChange={e => set('salary_currency', e.target.value)}
-                    className="text-sm border border-gray-200 rounded-xl px-3 py-3 bg-white focus:outline-none focus:border-blue-400 w-24">
-                    <option value="KZT">₸ KZT</option>
-                    <option value="USD">$ USD</option>
-                    <option value="EUR">€ EUR</option>
-                  </select>
-                  <input value={form.salary_from} onChange={e => set('salary_from', e.target.value)} placeholder="от (обязательно)" required
-                    className={`flex-1 text-sm border rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400 ${!form.salary_from ? 'border-amber-300' : 'border-gray-200'}`} />
-                  <input value={form.salary_to} onChange={e => set('salary_to', e.target.value)} placeholder="до (обязательно)" required
-                    className={`flex-1 text-sm border rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400 ${!form.salary_to ? 'border-amber-300' : 'border-gray-200'}`} />
+              <Field label="Зарплата — необязательно">
+                {/* Режим: диапазон или точная */}
+                <div className="flex gap-2 mb-3">
+                  {[{v:'range',l:'Диапазон'},{v:'exact',l:'Точная сумма'},{v:'none',l:'Не указывать'}].map(m => (
+                    <button key={m.v} type="button" onClick={() => set('salary_mode', m.v)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium border-2 transition-colors ${form.salary_mode===m.v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      {m.l}
+                    </button>
+                  ))}
                 </div>
-                <div className="flex gap-4 items-center flex-wrap">
+
+                {form.salary_mode === 'range' && (
+                  <div className="flex gap-2 mb-2">
+                    <select value={form.salary_currency} onChange={e => set('salary_currency', e.target.value)}
+                      className="text-sm border border-gray-200 rounded-xl px-3 py-3 bg-white focus:outline-none focus:border-blue-400 w-20">
+                      <option value="KZT">₸</option>
+                      <option value="USD">$</option>
+                      <option value="EUR">€</option>
+                    </select>
+                    <input value={form.salary_from} onChange={e => set('salary_from', e.target.value)} placeholder="от" className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
+                    <input value={form.salary_to} onChange={e => set('salary_to', e.target.value)} placeholder="до" className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
+                  </div>
+                )}
+
+                {form.salary_mode === 'exact' && (
+                  <div className="flex gap-2 mb-2">
+                    <select value={form.salary_currency} onChange={e => set('salary_currency', e.target.value)}
+                      className="text-sm border border-gray-200 rounded-xl px-3 py-3 bg-white focus:outline-none focus:border-blue-400 w-20">
+                      <option value="KZT">₸</option>
+                      <option value="USD">$</option>
+                      <option value="EUR">€</option>
+                    </select>
+                    <input value={form.salary_exact} onChange={e => set('salary_exact', e.target.value)} placeholder="250 000" className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400" />
+                  </div>
+                )}
+
+                {form.salary_mode !== 'none' && (
                   <div className="flex gap-2">
                     {[{v:'gross',l:'До налогов'},{v:'net',l:'На руки'}].map(t => (
                       <button key={t.v} type="button" onClick={() => set('salary_type', t.v)}
-                        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${form.salary_type===t.v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${form.salary_type===t.v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'}`}>
                         {t.l}
                       </button>
                     ))}
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer ml-auto">
-                    <input type="checkbox" checked={form.salary_visible} onChange={e => set('salary_visible', e.target.checked)} className="rounded" />
-                    <span className="text-xs text-gray-500">Показывать в объявлении</span>
-                  </label>
-                </div>
+                )}
               </Field>
               <Field label="Город">
                 <select value={form.city} onChange={e => set('city', e.target.value)} className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 bg-white">

@@ -47,15 +47,15 @@ export default async function JobPage({ params }: PageProps) {
 
   // Рыночное сравнение зарплат (#19)
   let marketData: { avg: number; count: number } | null = null
-  if (job.category && job.salary_from) {
-    const { data: salaries } = await supabase
-      .from('salaries')
-      .select('salary_monthly')
-      .eq('position_category', job.category)
-      .eq('is_published', true)
-      .limit(50)
-
-    if (salaries && salaries.length >= 3) {
+  const jobSalary = job.salary_from || job.salary_to
+  if (jobSalary) {
+    // Ищем по категории ИЛИ по ключевому слову из названия
+    let salariesQuery = supabase.from('salaries').select('salary_monthly').eq('is_published', true).limit(100)
+    if (job.category) {
+      salariesQuery = supabase.from('salaries').select('salary_monthly').eq('position_category', job.category).eq('is_published', true).limit(100)
+    }
+    const { data: salaries } = await salariesQuery
+    if (salaries && salaries.length >= 2) {
       const avg = Math.round(salaries.reduce((a, s) => a + s.salary_monthly, 0) / salaries.length)
       marketData = { avg, count: salaries.length }
     }
