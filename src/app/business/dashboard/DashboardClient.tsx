@@ -4,8 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Trash2, ExternalLink, RotateCcw } from 'lucide-react'
 
-export default function DashboardClient({ jobs: initialJobs, applications, companySlug }: {
-  jobs: any[]; applications: any[]; companySlug: string
+export default function DashboardClient({ jobs: initialJobs, applications, companyShortId }: {
+  jobs: any[]; applications: any[]; companyShortId: string
 }) {
   const [jobs, setJobs] = useState(initialJobs)
   const [closing, setClosing] = useState<string | null>(null)
@@ -124,9 +124,9 @@ export default function DashboardClient({ jobs: initialJobs, applications, compa
       </div>
 
       {/* Ссылки */}
-      {companySlug && (
+      {companyShortId && (
         <div className="md:col-span-2 grid sm:grid-cols-2 gap-4">
-          <Link href={`/company/${companySlug}`}
+          <Link href={`/company/${companyShortId}`}
             className="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors flex items-center justify-between">
             <div>
               <div className="font-medium text-gray-900 text-sm mb-1">Страница компании</div>

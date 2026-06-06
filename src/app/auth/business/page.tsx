@@ -6,33 +6,11 @@ import { useRouter } from 'next/navigation'
 import { Eye, Loader2, AlertCircle, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-function generateSlug(name?: string, bin?: string): string {
-  const safeName = (name ?? '').toLowerCase()
-
-  const slug = safeName
-    .replace(/[а-яё]/g, (char) => {
-      const map: Record<string, string> = {
-        а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',
-        и:'i',й:'j',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',
-        с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',
-        щ:'sch',ы:'y',э:'e',ю:'yu',я:'ya',
-      }
-      return map[char] || char
-    })
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-
-  const safeBin = bin ?? ''
-  return `${slug || 'company'}-${safeBin.slice(-6)}`
-}
-
 export default function BusinessRegisterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({
-    company_name: '', company_bin: '', contact_name: '', email: '', password: ''
-  })
+  const [form, setForm] = useState({ company_name: '', company_bin: '', contact_name: '', email: '', password: '' })
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,21 +23,17 @@ export default function BusinessRegisterPage() {
     try {
       const supabase = createClient()
 
-      // Создаём компанию сразу
-      const slug = generateSlug(form.company_name)
+      // Создаём компанию (short_id генерируется автоматически)
       const { data: company, error: coErr } = await supabase
         .from('companies')
-        .insert({ name_ru: form.company_name.trim(), slug, status: 'active' })
-        .select('id, slug')
+        .insert({ name_ru: form.company_name.trim(), status: 'active' })
+        .select('id, short_id')
         .single()
 
-      if (coErr && !coErr.message.includes('duplicate')) {
+      if (coErr) {
         setError('Ошибка создания компании: ' + coErr.message)
         return
       }
-
-      const companyId = company?.id
-      const companySlug = company?.slug || slug
 
       // Создаём аккаунт
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -68,18 +42,17 @@ export default function BusinessRegisterPage() {
         options: {
           data: {
             type: 'business',
-            company_id: companyId,
+            company_id: company.id,
+            company_short_id: company.short_id,
             company_name: form.company_name.trim(),
-            company_slug: companySlug,
             contact_name: form.contact_name,
-            status: 'pending',
           }
         }
       })
 
       if (signUpError) {
-        // Откатываем создание компании
-        if (companyId) await supabase.from('companies').delete().eq('id', companyId)
+        // Откат: удаляем компанию
+        await supabase.from('companies').delete().eq('id', company.id)
         setError(signUpError.message.includes('already registered') ? 'Этот email уже зарегистрирован' : signUpError.message)
         return
       }
@@ -95,19 +68,16 @@ export default function BusinessRegisterPage() {
           status: 'pending',
         }])
 
-        // Привязываем профиль компании
-        if (companyId) {
-          await supabase.from('company_profiles').upsert({
-            company_id: companyId,
-            user_id: data.user.id,
-            is_verified: false,
-            plan: 'free',
-          }, { onConflict: 'company_id' })
-        }
+        await supabase.from('company_profiles').upsert({
+          company_id: company.id,
+          user_id: data.user.id,
+          is_verified: false,
+          plan: 'free',
+        }, { onConflict: 'company_id' })
       }
 
       router.push('/auth/pending')
-    } catch (err) {
+    } catch {
       setError('Что-то пошло не так. Попробуйте ещё раз.')
     } finally {
       setLoading(false)
@@ -135,26 +105,22 @@ export default function BusinessRegisterPage() {
             </div>
           )}
 
-          <div className="pb-4 border-b border-gray-100">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          <div className="pb-4 border-b border-gray-100 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
               <Building2 className="w-3.5 h-3.5" /> Компания
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-1.5 block">Название компании *</label>
-                <input value={form.company_name} onChange={e => set('company_name', e.target.value)}
-                  placeholder="ТОО Название или просто Название" required
-                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-1.5 block">БИН компании *</label>
-                <input
-                  value={form.company_bin}
-                  onChange={e => set('company_bin', e.target.value.replace(/\D/g, '').slice(0, 12))}
-                  placeholder="123456789012" maxLength={12} required
-                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 font-mono tracking-wider" />
-                <p className="text-xs text-gray-400 mt-1">12 цифр · нужен модератору для проверки компании</p>
-              </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1.5 block">Название *</label>
+              <input value={form.company_name} onChange={e => set('company_name', e.target.value)}
+                placeholder="ТОО Название" required
+                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1.5 block">БИН *</label>
+              <input value={form.company_bin} onChange={e => set('company_bin', e.target.value.replace(/\D/g, '').slice(0, 12))}
+                placeholder="123456789012" maxLength={12} required
+                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 font-mono tracking-wider" />
+              <p className="text-xs text-gray-400 mt-1">12 цифр · нужен модератору для проверки</p>
             </div>
           </div>
 

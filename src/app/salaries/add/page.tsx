@@ -33,8 +33,7 @@ const CITIES = [
 
 const YEARS = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i))
 
-function formatSalary(val?: string): string {
-  if (!val) return ''
+function formatSalary(val: string): string {
   const num = parseInt(val.replace(/\D/g, ''))
   if (!num) return ''
   return num.toLocaleString('ru-RU')
@@ -102,7 +101,7 @@ function SalaryAddContent() {
               Добавить ещё
             </button>
             {company && (
-              <Link href={`/company/${company.bin}`}
+              <Link href={`/company/${company.short_id}`}
                 className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
                 К компании
               </Link>
@@ -298,7 +297,9 @@ function CompanyStep({ selected, onSelect, onNext }: any) {
     if (q.trim().length < 2) { setResults([]); return }
     setLoading(true)
     try {
-      const { data } = await createClient().rpc('search_companies', { p_query: q.trim(), p_limit: 6, p_offset: 0 })
+      const { data } = await createClient().from('companies')
+        .select('id, short_id, name_ru, city')
+        .ilike('name_ru', `%${q.trim()}%`).limit(6)
       setResults(data || [])
     } finally { setLoading(false) }
   }, [])
@@ -319,14 +320,14 @@ function CompanyStep({ selected, onSelect, onNext }: any) {
       {results.length > 0 && (
         <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
           {results.map(r => (
-            <button key={r.id} onClick={() => { onSelect({ id: r.id, name: r.name_ru, bin: r.bin }); setQuery(r.name_ru); setResults([]) }}
+            <button key={r.id} onClick={() => { onSelect({ id: r.id, short_id: r.short_id, name: r.name_ru }); setQuery(r.name_ru); setResults([]) }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-none text-left">
               <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                 <Building2 className="w-4 h-4 text-gray-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{r.name_ru}</div>
-                <div className="text-xs text-gray-400">{r.bin} · {r.city}</div>
+                <div className="text-xs text-gray-400">{r.city}</div>
               </div>
             </button>
           ))}

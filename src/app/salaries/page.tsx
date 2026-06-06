@@ -129,7 +129,7 @@ export default async function SalariesPage({ searchParams }: PageProps) {
                           )}
                         </div>
                         {company && (
-                          <Link href={`/company/${company.slug}`} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                          <Link href={`/company/${company.short_id}`} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                             {company.name_ru}
                           </Link>
                         )}

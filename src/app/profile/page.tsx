@@ -157,7 +157,7 @@ function ItemRow({ company, title, meta, date }: any) {
   return (
     <div className="flex items-center gap-3 px-5 py-3.5">
       {company && (
-        <Link href={`/company/${company.slug}`} className="text-sm font-medium text-blue-600 hover:text-blue-800 flex-shrink-0 max-w-[140px] truncate">
+        <Link href={`/company/${company.short_id}`} className="text-sm font-medium text-blue-600 hover:text-blue-800 flex-shrink-0 max-w-[140px] truncate">
           {company.name_ru}
         </Link>
       )}

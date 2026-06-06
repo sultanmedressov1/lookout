@@ -85,7 +85,7 @@ export default async function JobPage({ params }: PageProps) {
                 </div>
                 <div className="flex-1">
                   <h1 className="text-xl font-bold text-gray-900 mb-1">{job.title}</h1>
-                  {company && <Link href={`/company/${company.slug || company.id}`} className="text-blue-600 hover:text-blue-800 font-medium text-sm">{company.name_ru}</Link>}
+                  {company && <Link href={`/company/${company.short_id}`} className="text-blue-600 hover:text-blue-800 font-medium text-sm">{company.name_ru}</Link>}
                 </div>
               </div>
 
@@ -176,7 +176,7 @@ export default async function JobPage({ params }: PageProps) {
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900 text-sm">О компании</h3></div>
                 <div className="p-5">
-                  <Link href={`/company/${company.slug || company.id}`} className="font-medium text-blue-600 hover:text-blue-800 text-sm block mb-2">{company.name_ru}</Link>
+                  <Link href={`/company/${company.short_id}`} className="font-medium text-blue-600 hover:text-blue-800 text-sm block mb-2">{company.name_ru}</Link>
                   {company.industry_name && <p className="text-xs text-gray-500 mb-2">{company.industry_name}</p>}
                   {company.avg_rating > 0 && (
                     <div className="flex items-center gap-1.5 text-sm mb-3">
@@ -185,7 +185,7 @@ export default async function JobPage({ params }: PageProps) {
                       <span className="text-gray-400 text-xs">{company.reviews_count} отзывов</span>
                     </div>
                   )}
-                  <Link href={`/company/${company.slug || company.id}`} className="text-xs text-blue-600 hover:text-blue-800">
+                  <Link href={`/company/${company.short_id}`} className="text-xs text-blue-600 hover:text-blue-800">
                     Читать отзывы →
                   </Link>
                 </div>

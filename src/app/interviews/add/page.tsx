@@ -67,7 +67,7 @@ function InterviewContent() {
         <h2 className="text-xl font-bold text-gray-900 mb-2">Отзыв об интервью опубликован!</h2>
         <p className="text-gray-500 text-sm mb-6">Поможет другим кандидатам подготовиться.</p>
         <div className="flex gap-3 justify-center">
-          {company && <Link href={`/company/${company.bin}`} className="px-5 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700">К компании</Link>}
+          {company && <Link href={`/company/${company.short_id}`} className="px-5 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700">К компании</Link>}
           <button onClick={() => { setSubmitted(false); setStep(1); setCompany(null) }} className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Ещё отзыв</button>
         </div>
       </div>
@@ -221,7 +221,9 @@ function CompanyStep({ selected, onSelect, onNext }: any) {
     if (q.trim().length < 2) { setResults([]); return }
     setLoading(true)
     try {
-      const { data } = await createClient().rpc('search_companies', { p_query: q.trim(), p_limit: 6, p_offset: 0 })
+      const { data } = await createClient().from('companies')
+        .select('id, short_id, name_ru, city')
+        .ilike('name_ru', `%${q.trim()}%`).limit(6)
       setResults(data || [])
     } finally { setLoading(false) }
   }, [])
@@ -238,12 +240,12 @@ function CompanyStep({ selected, onSelect, onNext }: any) {
       {results.length > 0 && (
         <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
           {results.map(r => (
-            <button key={r.id} onClick={() => { onSelect({id:r.id,name:r.name_ru,bin:r.bin}); setQuery(r.name_ru); setResults([]) }}
+            <button key={r.id} onClick={() => { onSelect({id:r.id,short_id:r.short_id,name:r.name_ru}); setQuery(r.name_ru); setResults([]) }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-none text-left">
               <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{r.name_ru}</div>
-                <div className="text-xs text-gray-400">{r.bin} · {r.city}</div>
+                <div className="text-xs text-gray-400">{r.city}</div>
               </div>
             </button>
           ))}

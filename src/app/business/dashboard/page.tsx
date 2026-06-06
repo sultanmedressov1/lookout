@@ -18,24 +18,24 @@ export default async function BusinessDashboard() {
 
   const meta = user.user_metadata
   const companyName = meta?.company_name
-  let companySlug = meta?.company_slug
+  let companyShortId = meta?.company_short_id
 
   // Резолюция slug через company_id
-  if (!companySlug && meta?.company_id) {
+  if (!companyShortId && meta?.company_id) {
     const { data: co } = await admin.from('companies').select('slug').eq('id', meta.company_id).single()
-    companySlug = co?.slug
+    companyShortId = co?.short_id
   }
 
   // Последняя попытка — по имени
-  if (!companySlug && companyName) {
+  if (!companyShortId && companyName) {
     const { data: co } = await admin.from('companies').select('slug').ilike('name_ru', companyName).limit(1).maybeSingle()
-    companySlug = co?.slug
+    companyShortId = co?.short_id
   }
 
   // company_id для запросов
   let companyId = meta?.company_id
-  if (!companyId && companySlug) {
-    const { data: co } = await admin.from('companies').select('id').eq('slug', companySlug).single()
+  if (!companyId && companyShortId) {
+    const { data: co } = await admin.from('companies').select('id').eq('slug', companyShortId).single()
     companyId = co?.id
   }
 
@@ -101,7 +101,7 @@ export default async function BusinessDashboard() {
           ))}
         </div>
 
-        <DashboardClient jobs={jobs} applications={applications} companySlug={companySlug || ''} />
+        <DashboardClient jobs={jobs} applications={applications} companyShortId={companyShortId || ''} />
       </div>
     </div>
   )

@@ -127,7 +127,7 @@ export default async function WorkerProfilePage({ params }: Props) {
               {reviews.map((r: any) => (
                 <div key={r.id} className="px-5 py-3.5 flex items-center gap-3">
                   {r.companies && (
-                    <Link href={`/company/${r.companies.slug}`} className="text-sm font-medium text-blue-600 hover:text-blue-800 flex-shrink-0 max-w-[180px] truncate">
+                    <Link href={`/company/${r.companies.short_id}`} className="text-sm font-medium text-blue-600 hover:text-blue-800 flex-shrink-0 max-w-[180px] truncate">
                       {r.companies.name_ru}
                     </Link>
                   )}
