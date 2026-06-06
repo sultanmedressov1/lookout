@@ -44,7 +44,7 @@ export default async function BusinessDashboard() {
       .eq('company_id', companyId).order('created_at', { ascending: false }),
     admin.from('reviews_employee').select('id, rating_overall')
       .eq('company_id', companyId).eq('is_published', true),
-    admin.from('job_applications').select('id, status, job_id, applicant_name, created_at, jobs(title)')
+    admin.from('job_applications').select('id, status, job_id, applicant_name, created_at, worker_profile_id, jobs(title)')
       .eq('company_id', companyId).order('created_at', { ascending: false }).limit(10),
     admin.from('notifications').select('id').eq('user_id', user.id).eq('is_read', false),
   ])
@@ -71,9 +71,15 @@ export default async function BusinessDashboard() {
                 <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-medium">{unreadNotifs}</span>
               </Link>
             )}
+            <div className="flex items-center gap-3 flex-wrap">
+            <Link href="/business/profile"
+              className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+              Профиль компании
+            </Link>
             <Link href="/jobs/add" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm">
               <Plus className="w-4 h-4" /> Новая вакансия
             </Link>
+          </div>
           </div>
         </div>
 

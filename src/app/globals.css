@@ -37,3 +37,9 @@
   .risk-medium { @apply text-amber-600 bg-amber-50 border-amber-200; }
   .risk-low { @apply text-emerald-600 bg-emerald-50 border-emerald-200; }
 }
+
+@layer components {
+  .inp {
+    @apply w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400;
+  }
+}
