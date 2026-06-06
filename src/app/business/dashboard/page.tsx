@@ -20,22 +20,22 @@ export default async function BusinessDashboard() {
   const companyName = meta?.company_name
   let companyShortId = meta?.company_short_id
 
-  // Резолюция slug через company_id
+  // Резолюция short_id через company_id
   if (!companyShortId && meta?.company_id) {
-    const { data: co } = await admin.from('companies').select('slug').eq('id', meta.company_id).single()
+    const { data: co } = await admin.from('companies').select('short_id').eq('id', meta.company_id).single()
     companyShortId = co?.short_id
   }
 
   // Последняя попытка — по имени
   if (!companyShortId && companyName) {
-    const { data: co } = await admin.from('companies').select('slug').ilike('name_ru', companyName).limit(1).maybeSingle()
+    const { data: co } = await admin.from('companies').select('short_id').ilike('name_ru', companyName).limit(1).maybeSingle()
     companyShortId = co?.short_id
   }
 
   // company_id для запросов
   let companyId = meta?.company_id
   if (!companyId && companyShortId) {
-    const { data: co } = await admin.from('companies').select('id').eq('slug', companyShortId).single()
+    const { data: co } = await admin.from('companies').select('id').eq('short_id', companyShortId).single()
     companyId = co?.id
   }
 
