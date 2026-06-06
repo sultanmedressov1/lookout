@@ -94,7 +94,6 @@ export default async function SalariesPage({ searchParams }: PageProps) {
               <option value="">Все уровни</option>
               {LEVELS.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-            </div>
             <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
               Применить
             </button>
