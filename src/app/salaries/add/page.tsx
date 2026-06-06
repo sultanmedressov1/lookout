@@ -44,7 +44,7 @@ function SalaryAddContent() {
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [company, setCompany] = useState<{ id: string; name: string; bin: string } | null>(null)
+  const [company, setCompany] = useState<{ id: string; short_id: string; name: string } | null>(null)
   const [form, setForm] = useState({
     position_title: '',
     position_category: '',
