@@ -37,7 +37,8 @@ export default async function CompanyPage({ params }: PageProps) {
     .from('companies')
     .select('id')
     .ilike('name_ru', company.name_ru)
-  const allIds = [...new Set([company.id, ...(siblings?.map(s => s.id) || [])])]
+  const siblingIds = siblings?.map(s => s.id) || []
+  const allIds = Array.from(new Set([company.id, ...siblingIds]))
 
   const [courtRes, taxRes, empRes, cptyRes, responsesRes] = await Promise.all([
     supabase.from('court_cases').select('*').eq('company_id', company.id)
