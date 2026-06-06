@@ -16,7 +16,7 @@ function InterviewContent() {
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [company, setCompany] = useState<{id:string;name:string;bin:string}|null>(null)
+  const [company, setCompany] = useState<{id:string;short_id:string;name:string}|null>(null)
 
   const [form, setForm] = useState({
     rating_overall: 0,
