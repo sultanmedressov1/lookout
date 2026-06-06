@@ -25,6 +25,8 @@ export default async function HomePage() {
       .eq('is_active', true).order('created_at', { ascending: false }).limit(4),
     supabase.from('reviews_employee').select('id, title, rating_overall, pros, created_at, companies(name_ru, slug)')
       .eq('is_published', true).order('created_at', { ascending: false }).limit(3),
+  ])
+
   const typeLabel: Record<string, string> = { 'full-time': 'Полная ставка', 'part-time': 'Частичная', 'contract': 'Контракт', 'intern': 'Стажировка', 'remote': 'Удалённо' }
   const currSym: Record<string, string> = { KZT: '₸', USD: '$', EUR: '€' }
 
@@ -52,6 +54,7 @@ export default async function HomePage() {
             <SearchBar size="lg" theme="dark" />
           </div>
 
+        </div>
       </section>
 
       {/* ─── Три раздела ───────────────────────────────── */}
