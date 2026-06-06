@@ -12,6 +12,7 @@ export default function ApplySection({ jobId, companyId, jobTitle, companyUserId
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [isBusiness, setIsBusiness] = useState<boolean | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [form, setForm] = useState({ name: '', email: '', cover_letter: '' })
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
@@ -20,7 +21,8 @@ export default function ApplySection({ jobId, companyId, jobTitle, companyUserId
     const load = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setIsBusiness(false); return }
+      if (!user) { setIsBusiness(false); setCurrentUser(false); return }
+      setCurrentUser(user)
       if (user.user_metadata?.type === 'business') { setIsBusiness(true); return }
       setIsBusiness(false)
       const { data: wp } = await supabase.from('worker_profiles').select('*').eq('user_id', user.id).single()
@@ -36,6 +38,27 @@ export default function ApplySection({ jobId, companyId, jobTitle, companyUserId
 
   if (isBusiness === null) return null
   if (isBusiness) return null
+
+  // Не авторизован — показываем CTA регистрации
+  if (!currentUser) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Send className="w-5 h-5 text-blue-600" />
+        </div>
+        <h3 className="font-semibold text-gray-900 mb-1">Войдите чтобы откликнуться</h3>
+        <p className="text-sm text-gray-500 mb-4">Создайте аккаунт — это бесплатно и занимает 1 минуту</p>
+        <div className="flex gap-3 justify-center">
+          <a href="/auth/signup" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Зарегистрироваться
+          </a>
+          <a href="/auth/signin" className="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+            Войти
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault()

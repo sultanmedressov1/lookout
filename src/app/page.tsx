@@ -18,13 +18,6 @@ function fmtSalary(n: number) {
 export default async function HomePage() {
   const supabase = createClient()
 
-  const [companiesRes, reviewsRes, jobsRes, salariesRes] = await Promise.all([
-    supabase.from('companies').select('id', { count: 'exact', head: true }),
-    supabase.from('reviews_employee').select('id', { count: 'exact', head: true }).eq('is_published', true),
-    supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('salaries').select('id', { count: 'exact', head: true }).eq('is_published', true),
-  ])
-
   const [topCompanies, latestJobs, latestReviews] = await Promise.all([
     supabase.from('companies').select('id, name_ru, slug, city, industry_name, avg_rating, reviews_count')
       .gt('reviews_count', 0).order('avg_rating', { ascending: false }).limit(6),
@@ -32,8 +25,6 @@ export default async function HomePage() {
       .eq('is_active', true).order('created_at', { ascending: false }).limit(4),
     supabase.from('reviews_employee').select('id, title, rating_overall, pros, created_at, companies(name_ru, slug)')
       .eq('is_published', true).order('created_at', { ascending: false }).limit(3),
-  ])
-
   const typeLabel: Record<string, string> = { 'full-time': 'Полная ставка', 'part-time': 'Частичная', 'contract': 'Контракт', 'intern': 'Стажировка', 'remote': 'Удалённо' }
   const currSym: Record<string, string> = { KZT: '₸', USD: '$', EUR: '€' }
 
@@ -61,21 +52,6 @@ export default async function HomePage() {
             <SearchBar size="lg" theme="dark" />
           </div>
 
-          {/* Статистика */}
-          <div className="flex flex-wrap justify-center gap-8 mt-12">
-            {[
-              { label: 'Компаний', value: fmt(companiesRes.count || 0) },
-              { label: 'Отзывов', value: fmt(reviewsRes.count || 0) },
-              { label: 'Вакансий', value: fmt(jobsRes.count || 0) },
-              { label: 'Зарплат', value: fmt(salariesRes.count || 0) },
-            ].map(s => (
-              <div key={s.label} className="text-center">
-                <div className="text-3xl font-bold">{s.value}</div>
-                <div className="text-blue-200 text-sm">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* ─── Три раздела ───────────────────────────────── */}

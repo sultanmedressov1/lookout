@@ -100,7 +100,12 @@ export default function DashboardClient({ jobs: initialJobs, applications, compa
                   <span className="text-xs font-semibold text-blue-700">{app.applicant_name.charAt(0)}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">{app.applicant_name}</div>
+                  <div className="text-sm font-medium text-gray-900 truncate">
+                    {app.worker_profile_id
+                      ? <Link href={`/workers/${app.worker_profile_id}`} className="hover:text-blue-600 transition-colors">{app.applicant_name}</Link>
+                      : app.applicant_name
+                    }
+                  </div>
                   <Link href={`/business/applications/${app.job_id}`} className="text-xs text-gray-400 hover:text-blue-600 truncate block">
                     {(app.jobs as any)?.title}
                   </Link>

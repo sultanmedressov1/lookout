@@ -5,12 +5,11 @@ import { MapPin, Briefcase, Clock, Building2, Star, Plus, Search, DollarSign } f
 
 export const metadata: Metadata = { title: 'Вакансии в Казахстане — Lookout' }
 
-interface PageProps { searchParams: { q?: string; city?: string; category?: string; type?: string; salary_min?: string } }
+interface PageProps { searchParams: { q?: string; city?: string; category?: string; type?: string; salary_from?: string; salary_to?: string } }
 
 const CATEGORIES = ['IT и разработка','Менеджмент','Продажи','Маркетинг','Финансы','HR','Операции','Дизайн','Аналитика','Другое']
 const CITIES = ['Алматы','Астана','Шымкент','Актобе','Тараз','Павлодар']
 const TYPES = [['full-time','Полная ставка'],['part-time','Частичная'],['contract','Контракт'],['intern','Стажировка'],['remote','Удалённо']]
-const SALARY_RANGES = [['100000','от 100K'],['200000','от 200K'],['400000','от 400K'],['800000','от 800K']]
 
 function fmt(n: number) {
   if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)} млн`
@@ -29,14 +28,15 @@ export default async function JobsPage({ searchParams }: PageProps) {
   if (searchParams.city) query = query.eq('city', searchParams.city)
   if (searchParams.category) query = query.eq('category', searchParams.category)
   if (searchParams.type) query = query.eq('employment_type', searchParams.type)
-  if (searchParams.salary_min) query = query.gte('salary_from', parseInt(searchParams.salary_min))
+  if (searchParams.salary_from) query = query.gte('salary_from', parseInt(searchParams.salary_from))
+  if (searchParams.salary_to) query = query.lte('salary_from', parseInt(searchParams.salary_to))
 
   const { data: jobs } = await query
   const items = jobs || []
 
   const typeLabels: Record<string, string> = Object.fromEntries(TYPES)
 
-  const hasFilters = searchParams.q || searchParams.city || searchParams.category || searchParams.type || searchParams.salary_min
+  const hasFilters = searchParams.q || searchParams.city || searchParams.category || searchParams.type || searchParams.salary_from || searchParams.salary_to
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -81,11 +81,15 @@ export default async function JobsPage({ searchParams }: PageProps) {
                 {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
 
-              <select name="salary_min" defaultValue={searchParams.salary_min}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-blue-400">
-                <option value="">Любая зарплата</option>
-                {SALARY_RANGES.map(([v, l]) => <option key={v} value={v}>{l} ₸</option>)}
-              </select>
+              <div className="flex items-center gap-1.5">
+                <input name="salary_from" type="number" defaultValue={searchParams.salary_from}
+                  placeholder="от ₸" min="0" step="50000"
+                  className="w-28 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+                <span className="text-gray-400 text-sm">—</span>
+                <input name="salary_to" type="number" defaultValue={searchParams.salary_to}
+                  placeholder="до ₸" min="0" step="50000"
+                  className="w-28 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+              </div>
 
               <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
                 Найти
