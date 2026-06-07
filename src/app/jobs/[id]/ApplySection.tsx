@@ -70,6 +70,7 @@ export default function ApplySection({ jobId, companyId, jobTitle, companyUserId
         applicant_name: form.name, applicant_email: form.email,
         cover_letter: form.cover_letter || null,
         worker_profile_id: profile?.id || null,
+        worker_user_id: currentUser?.id || null,
         applicant_phone: profile?.phone || null,
         applicant_city: profile?.city || null,
         applicant_about: profile?.about || null,

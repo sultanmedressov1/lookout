@@ -87,27 +87,32 @@ export default function BusinessProfilePage() {
     setError('')
     const supabase = createClient()
 
-    const { error: saveErr } = await supabase.from('companies').update({
-      name_ru: form.name_ru || undefined,
-      description: form.description || null,
-      website: form.website || null,
-      linkedin: form.linkedin || null,
-      industry_name: form.industry_name || null,
-      company_size: form.company_size || null,
-      city: form.city || null,
-      address: form.address || null,
-      founded_year: form.founded_year ? parseInt(form.founded_year) : null,
-      remote_policy: form.remote_policy || null,
-      mission: form.mission || null,
-      culture_description: form.culture_description || null,
-      hiring_process: form.hiring_process || null,
-      avg_salary_range: form.avg_salary_range || null,
-      benefits: form.benefits.length > 0 ? form.benefits : null,
-      perks_description: form.perks_description || null,
-    }).eq('id', companyId)
-
-    if (saveErr) {
-      setError(`Ошибка: ${saveErr.message}`)
+    const res = await fetch('/api/business/update-company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        company_id: companyId,
+        name_ru: form.name_ru || undefined,
+        description: form.description || null,
+        website: form.website || null,
+        linkedin: form.linkedin || null,
+        industry_name: form.industry_name || null,
+        company_size: form.company_size || null,
+        city: form.city || null,
+        address: form.address || null,
+        founded_year: form.founded_year ? parseInt(form.founded_year) : null,
+        remote_policy: form.remote_policy || null,
+        mission: form.mission || null,
+        culture_description: form.culture_description || null,
+        hiring_process: form.hiring_process || null,
+        avg_salary_range: form.avg_salary_range || null,
+        benefits: form.benefits.length > 0 ? form.benefits : null,
+        perks_description: form.perks_description || null,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setError(`Ошибка: ${data.error}`)
     } else {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)

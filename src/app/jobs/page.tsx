@@ -5,7 +5,7 @@ import { MapPin, Briefcase, Clock, Building2, Star, Plus, Search, DollarSign } f
 
 export const metadata: Metadata = { title: 'Вакансии в Казахстане — Lookout' }
 
-interface PageProps { searchParams: { q?: string; city?: string; category?: string; type?: string; salary_from?: string; salary_to?: string } }
+interface PageProps { searchParams: { q?: string; city?: string; category?: string; type?: string; salary_from?: string; salary_to?: string; experience?: string } }
 
 const CATEGORIES = ['IT и разработка','Менеджмент','Продажи','Маркетинг','Финансы','HR','Операции','Дизайн','Аналитика','Другое']
 const CITIES = ['Алматы','Астана','Шымкент','Актобе','Тараз','Павлодар']
@@ -30,13 +30,14 @@ export default async function JobsPage({ searchParams }: PageProps) {
   if (searchParams.type) query = query.eq('employment_type', searchParams.type)
   if (searchParams.salary_from) query = query.gte('salary_from', parseInt(searchParams.salary_from))
   if (searchParams.salary_to) query = query.lte('salary_from', parseInt(searchParams.salary_to))
+  if (searchParams.experience) query = query.eq('experience_level', searchParams.experience)
 
   const { data: jobs } = await query
   const items = jobs || []
 
   const typeLabels: Record<string, string> = Object.fromEntries(TYPES)
 
-  const hasFilters = searchParams.q || searchParams.city || searchParams.category || searchParams.type || searchParams.salary_from || searchParams.salary_to
+  const hasFilters = searchParams.q || searchParams.city || searchParams.category || searchParams.type || searchParams.salary_from || searchParams.salary_to || searchParams.experience
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -79,6 +80,16 @@ export default async function JobsPage({ searchParams }: PageProps) {
                 className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-blue-400">
                 <option value="">Тип занятости</option>
                 {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+
+              <select name="experience" defaultValue={searchParams.experience}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-blue-400">
+                <option value="">Опыт работы</option>
+                <option value="intern">Стажёр / без опыта</option>
+                <option value="junior">Junior (1–2 года)</option>
+                <option value="middle">Middle (2–5 лет)</option>
+                <option value="senior">Senior (5+ лет)</option>
+                <option value="lead">Lead / Управление</option>
               </select>
 
               <div className="flex items-center gap-1.5">
