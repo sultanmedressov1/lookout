@@ -72,7 +72,7 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
               </div>
 
               {/* Рейтинг — как у Glassdoor */}
-              {avg && totalReviews > 0 ? (
+              {avg && totalReviews > 0 && (
                 <div className="flex items-center gap-3 mb-3 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <span className="text-3xl font-bold text-gray-900">{avg.toFixed(1)}</span>
@@ -84,8 +84,6 @@ export function CompanyPageClient({ company, courtCases, taxRecords, empReviews,
                   </div>
                   <span className="text-sm text-gray-400">{totalReviews} {totalReviews === 1 ? 'отзыв' : 'отзывов'}</span>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-400 mb-3">Отзывов пока нет</p>
               )}
 
               {/* Мета */}

@@ -63,7 +63,7 @@ export default async function ProfilePage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
               {profile.phone && <InfoBadge icon={Phone} label="Телефон" value={profile.phone} />}
               {profile.city && <InfoBadge icon={MapPin} label="Город" value={profile.city} />}
-              {profile.experience_years && <InfoBadge icon={Briefcase} label="Опыт" value={String(profile.experience_years)} />}
+              {profile.experience_years && <InfoBadge icon={Briefcase} label="Опыт" value={`${profile.experience_years} лет`} />}
               {profile.education_level && <InfoBadge icon={GraduationCap} label="Образование" value={profile.education_level} />}
               {profile.telegram && <InfoBadge icon={Send} label="Telegram" value={profile.telegram} />}
               {profile.github_portfolio && <InfoBadge icon={ExternalLink} label="Портфолио" value={profile.github_portfolio} href={profile.github_portfolio} />}
