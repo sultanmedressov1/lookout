@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Star, DollarSign, Briefcase, User, Edit, Phone, MapPin, GraduationCap, Send, ExternalLink, Globe, CheckCircle2, Calendar } from 'lucide-react'
+import { ResumeButton } from './ResumeButton'
 
 export default async function ProfilePage() {
   const supabase = createClient()
@@ -41,8 +42,10 @@ export default async function ProfilePage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-5">
           <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-blue-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+                {profile?.photo_url
+                  ? <img src={profile.photo_url} alt="Фото" className="w-full h-full object-cover" />
+                  : <User className="w-8 h-8 text-blue-600" />}
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">{profile?.full_name || name}</h1>
@@ -50,10 +53,13 @@ export default async function ProfilePage() {
                 <p className="text-xs text-gray-400 mt-0.5">{user.email}</p>
               </div>
             </div>
-            <Link href="/profile/edit"
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-              <Edit className="w-4 h-4" /> Редактировать
-            </Link>
+            <div className="flex items-center gap-2 flex-wrap">
+              {profile?.resume_url && <ResumeButton resumePath={profile.resume_url} />}
+              <Link href="/profile/edit"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                <Edit className="w-4 h-4" /> Редактировать
+              </Link>
+            </div>
           </div>
 
           {profile?.about && <p className="text-sm text-gray-600 leading-relaxed mb-4">{profile.about}</p>}
