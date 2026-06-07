@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, CheckCircle2, Building2, ArrowLeft, AlertCircle } from 'lucide-react'
+import { Loader2, CheckCircle2, Building2, ArrowLeft, AlertCircle, Camera } from 'lucide-react'
 import Link from 'next/link'
 
 const INDUSTRIES = ['IT и технологии','Банковская деятельность','Страхование','Розничная торговля','Производство','Строительство','Телекоммуникации','Образование','Медицина и фармацевтика','Транспорт и логистика','Нефть и газ','Финансы','Консалтинг','Маркетинг и реклама','Медиа','Юридические услуги','Недвижимость','Туризм','Другое']
@@ -21,6 +21,9 @@ export default function BusinessProfilePage() {
   const [error, setError] = useState('')
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'basic'|'culture'|'benefits'>('basic')
+  const [logoUrl, setLogoUrl] = useState<string>('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState({
     name_ru: '', description: '', website: '', linkedin: '',
     industry_name: '', company_size: '', city: '', address: '',
@@ -80,6 +83,20 @@ export default function BusinessProfilePage() {
     load()
   }, [])
 
+  const uploadLogo = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) { alert('Максимум 5 МБ'); return }
+    setUploadingLogo(true)
+    const supabase = createClient()
+    const ext = file.name.split('.').pop()
+    const path = `companies/${companyId}/logo.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (!error) {
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+      setLogoUrl(data.publicUrl + '?t=' + Date.now())
+    }
+    setUploadingLogo(false)
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!companyId) { setError('ID компании не найден'); return }
@@ -108,6 +125,7 @@ export default function BusinessProfilePage() {
         avg_salary_range: form.avg_salary_range || null,
         benefits: form.benefits.length > 0 ? form.benefits : null,
         perks_description: form.perks_description || null,
+        logo_url: logoUrl || null,
       }),
     })
     const data = await res.json()
@@ -153,6 +171,28 @@ export default function BusinessProfilePage() {
               {t.label}
             </button>
           ))}
+        </div>
+
+        {/* Логотип компании */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-5 mb-5">
+          <div onClick={() => logoRef.current?.click()}
+            className="w-20 h-20 rounded-xl bg-gray-100 border-2 border-gray-200 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center relative">
+            {logoUrl
+              ? <img src={logoUrl} alt="Логотип" className="w-full h-full object-contain p-1" />
+              : <Building2 className="w-8 h-8 text-gray-400" />}
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white">
+              {uploadingLogo ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" />}
+            </div>
+          </div>
+          <div>
+            <p className="font-medium text-gray-900 text-sm mb-1">{form.name_ru || 'Логотип компании'}</p>
+            <p className="text-xs text-gray-400 mb-2">PNG, JPG · до 5 МБ</p>
+            <button type="button" onClick={() => logoRef.current?.click()}
+              className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50">
+              {logoUrl ? 'Изменить логотип' : 'Загрузить логотип'}
+            </button>
+          </div>
+          <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && uploadLogo(e.target.files[0])} />
         </div>
 
         <form onSubmit={handleSave} className="space-y-5">
