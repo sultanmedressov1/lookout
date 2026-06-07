@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { User, Phone, MapPin, Briefcase, GraduationCap, ArrowLeft, Mail, Star, Globe, Send, ExternalLink, Calendar, CheckCircle2, FileText } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { ResumeDownload } from './ResumeDownload'
 
 interface Props { params: { id: string } }
 
@@ -85,7 +85,7 @@ export default async function WorkerProfilePage({ params }: Props) {
 
           {/* Резюме */}
           {profile.resume_url && (
-            <ResumeDownload userId={profile.user_id} resumePath={profile.resume_url} />
+            <ResumeDownload resumePath={profile.resume_url} />
           )}
 
           {/* Основная информация */}
@@ -188,23 +188,6 @@ export default async function WorkerProfilePage({ params }: Props) {
       </div>
     </div>
   )
-}
-
-function ResumeDownload({ userId, resumePath }: { userId: string; resumePath: string }) {
-  const [url, setUrl] = useState<string | null>(null)
-  useEffect(() => {
-    import('@/lib/supabase/client').then(({ createClient }) => {
-      const { data } = createClient().storage.from('resumes').getPublicUrl(resumePath)
-      setUrl(data.publicUrl)
-    })
-  }, [resumePath])
-
-  return url ? (
-    <a href={url} target="_blank" rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors mb-4">
-      <FileText className="w-4 h-4" /> Скачать резюме (PDF)
-    </a>
-  ) : null
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
