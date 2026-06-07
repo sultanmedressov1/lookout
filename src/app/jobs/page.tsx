@@ -85,11 +85,11 @@ export default async function JobsPage({ searchParams }: PageProps) {
               <select name="experience" defaultValue={searchParams.experience}
                 className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-blue-400">
                 <option value="">Опыт работы</option>
-                <option value="intern">Стажёр / без опыта</option>
-                <option value="junior">Junior (1–2 года)</option>
-                <option value="middle">Middle (2–5 лет)</option>
-                <option value="senior">Senior (5+ лет)</option>
-                <option value="lead">Lead / Управление</option>
+                <option value="no_exp">Нет опыта</option>
+                <option value="up_to_1">До 1 года</option>
+                <option value="one_to_three">От 1 до 3 лет</option>
+                <option value="three_to_six">От 3 до 6 лет</option>
+                <option value="over_six">Более 6 лет</option>
               </select>
 
               <div className="flex items-center gap-1.5">

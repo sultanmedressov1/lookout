@@ -191,12 +191,12 @@ function JobAddContent() {
                 </Field>
                 <Field label="Уровень">
                   <select value={form.experience_level} onChange={e => set('experience_level', e.target.value)} className="w-full text-sm border border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-blue-400 bg-white">
-                    <option value="any">Любой</option>
-                    <option value="intern">Стажёр</option>
-                    <option value="junior">Junior</option>
-                    <option value="middle">Middle</option>
-                    <option value="senior">Senior</option>
-                    <option value="lead">Lead</option>
+                    <option value="no_exp">Нет опыта</option>
+                    <option value="up_to_1">До 1 года</option>
+                    <option value="one_to_three">От 1 до 3 лет</option>
+                    <option value="three_to_six">От 3 до 6 лет</option>
+                    <option value="over_six">Более 6 лет</option>
+                    <option value="any">Не имеет значения</option>
                   </select>
                 </Field>
               </div>
